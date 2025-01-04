@@ -8,6 +8,8 @@ app.use(bodyParser.json());
 app.use(
   cors({
     origin: ["https://secondhandhand22.wixsite.com/", "http://localhost:3000"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
   })
 );
 
