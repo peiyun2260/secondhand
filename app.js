@@ -52,7 +52,7 @@ app.post("/api/createOrder", (req, res) => {
   }
 
   const insertOrderQuery = `
-          INSERT INTO Orders (product_id, seller_id, buyer_id, total_amount, trade_time, trade_location)
+          INSERT INTO Orders (product_id, seller_id, order_id, total_amount, trade_time, trade_location)
           VALUES (?, ?, ?, ?, ?, ?)
       `;
   const updateProductQuery = `
@@ -148,6 +148,85 @@ app.patch("/api/updateOrder/:orderId", (req, res) => {
     res.status(200).send({ message: "訂單狀態已成功更新為 completed" });
   });
 });
+
+app.post("/api/addReview", (req, res) => {
+  const { productId, buyerId, reviewText, rating } = req.body;
+
+  // 驗證輸入的完整性
+  if (!productId || !buyerId || !reviewText || !rating) {
+    return res.status(400).send("缺少必要的評論資訊");
+  }
+
+  const addReviewQuery = `
+    INSERT INTO Reviews (product_id, reviewer_id, content, rating)
+    VALUES (?, ?, ?, ?)
+  `;
+
+  db.query(addReviewQuery, [productId, buyerId, reviewText, rating], (err, result) => {
+    if (err) {
+      console.error("無法新增評論：", err);
+      return res.status(500).send("新增評論時發生錯誤");
+    }
+
+    res.status(201).send({
+      message: "評論已成功提交",
+      reviewId: result.insertId,
+    });
+  });
+});
+
+// API： 讀取特定商品的評論
+app.get("/api/getReviews/:productId", (req, res) => {
+  const { productId } = req.params;
+
+  // 驗證商品 ID 是否存在
+  if (!productId) {
+    return res.status(400).send("缺少商品 ID");
+  }
+
+  const getReviewsQuery = `
+    SELECT reviewer_id, content, rating, review_date
+    FROM Reviews
+    WHERE product_id = ?
+    ORDER BY review_date DESC
+  `;
+
+  db.query(getReviewsQuery, [productId], (err, results) => {
+    if (err) {
+      console.error("無法讀取評論：", err);
+      return res.status(500).send("讀取評論時發生錯誤");
+    }
+
+    res.status(200).send(results);
+  });
+});
+
+// API：讀取購買者的所有評論
+app.get("/api/getUserReviews/:buyerId", (req, res) => {
+  const { buyerId } = req.params;
+
+  // 驗證買家 ID 是否存在
+  if (!buyerId) {
+    return res.status(400).send("缺少買家 ID");
+  }
+
+  const getUserReviewsQuery = `
+    SELECT product_id, content, rating, review_date
+    FROM Reviews
+    WHERE order_id = ?
+    ORDER BY review_date DESC
+  `;
+
+  db.query(getUserReviewsQuery, [buyerId], (err, results) => {
+    if (err) {
+      console.error("無法讀取購買者的評論：", err);
+      return res.status(500).send("讀取購買者評論時發生錯誤");
+    }
+
+    res.status(200).send(results);
+  });
+});
+
 
 // 啟動伺服器
 const PORT = process.env.PORT || 3000;
