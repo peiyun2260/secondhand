@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mysql = require("mysql2");
 const cors = require("cors");
+require('dotenv').config();
 const app = express();
 
 app.use(bodyParser.json());
@@ -28,6 +29,105 @@ app.get("/", (req, res) => {
   res.send("伺服器已啟動");
 });
 
+// 用戶管理 API
+const JWT_SECRET = process.env.JWT_SECRET;
+const bcrypt = require("bcrypt");
+
+// 查詢所有 user
+app.get("/users", (req, res) => {
+  db.query("SELECT * FROM Users", (err, results) => {
+      if (err) {
+          res.status(500).send(err);
+      } else {
+          res.json(results);
+      }
+  });
+});
+
+// 註冊 API
+app.post("/register", async (req, res) => {
+    const { username, email, password } = req.body;
+
+    // 驗證輸入數據
+    if (!username || !email || !password) {
+        return res.status(400).send({ error: "所有欄位都是必填的！" });
+    }
+
+    try {
+        // 檢查用戶是否已存在
+        const userCheck = await new Promise((resolve, reject) => {
+            db.query("SELECT * FROM Users WHERE email = ?", [email], (err, results) => {
+                if (err) reject(err);
+                else resolve(results);
+            });
+        });
+
+        if (userCheck.length > 0) {
+            return res.status(400).send({ error: "該電子郵件已被註冊！" });
+        }
+
+        // 加密密碼
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // 插入用戶數據到資料庫
+        const result = await new Promise((resolve, reject) => {
+            db.query(
+                "INSERT INTO Users (username, email, password_hash, registered_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
+                [username, email, hashedPassword],
+                (err, results) => {
+                    if (err) reject(err);
+                    else resolve(results);
+                }
+            );
+        });
+
+        res.status(201).send({ message: "註冊成功！", userId: result.insertId });
+    } catch (error) {
+        console.error("註冊錯誤:", error);
+        res.status(500).send({ error: "伺服器錯誤！" });
+    }
+});
+
+// 登入 API
+app.post("/login", async (req, res) => {
+    const { email, password } = req.body;
+
+    // 驗證輸入數據
+    if (!email || !password) {
+        return res.status(400).send({ error: "電子郵件和密碼是必填的！" });
+    }
+
+    try {
+        // 查詢用戶
+        const user = await new Promise((resolve, reject) => {
+            db.query("SELECT * FROM Users WHERE email = ?", [email], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+
+        if (!user) {
+            return res.status(404).send({ error: "用戶不存在！" });
+        }
+
+        // 驗證密碼
+        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+        if (!isPasswordValid) {
+            return res.status(401).send({ error: "密碼錯誤！" });
+        }
+
+        // 生成 JWT
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "1h" });
+
+        res.status(200).send({ message: "登入成功！", token });
+    } catch (error) {
+        console.error("登入錯誤:", error);
+        res.status(500).send({ error: "伺服器錯誤！" });
+    }
+});
+
+
+// 訂單管理 API
 // API: 建立訂單
 app.post("/api/createOrder", (req, res) => {
   const {
