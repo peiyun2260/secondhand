@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 app.use(
   cors({
     origin: ["https://secondhandhand22.wixsite.com/", "http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
@@ -28,6 +28,8 @@ const db = mysql.createPool({
 app.get("/", (req, res) => {
   res.send("伺服器已啟動");
 });
+
+app.options("*", cors());
 
 // 用戶管理 API
 const JWT_SECRET = process.env.JWT_SECRET;
