@@ -8,7 +8,10 @@ const app = express();
 app.use(bodyParser.json());
 app.use(
   cors({
-    origin: ["https://secondhandhand22.wixsite.com/", "http://localhost:3000"],
+    origin: ["https://secondhandhand22.wixsite.com/",
+            "https://secondhandhand22.wixsite.com/my-site-1", 
+            "http://localhost:3000"],
+            
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
