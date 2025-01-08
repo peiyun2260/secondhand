@@ -153,9 +153,13 @@ app.post("/login", async (req, res) => {
     }
 
     // 生成 JWT
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign(
+      { id: user.user_id, email: user.email },
+      JWT_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );
 
     res.status(200).send({ message: "登入成功！", token });
   } catch (error) {
