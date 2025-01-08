@@ -168,6 +168,29 @@ app.post("/login", async (req, res) => {
   }
 });
 
+// 查詢 username
+app.get("/Users/:userId/username", (req, res) => {
+  const { userId } = req.params;
+
+  db.query(
+    "SELECT username FROM Users WHERE user_id = ?",
+    [userId],
+    (err, results) => {
+      if (err) {
+        console.error("查詢用戶名稱錯誤:", err);
+        return res.status(500).send({ error: "伺服器錯誤" });
+      }
+
+      if (results.length > 0) {
+        // 如果找到該用戶，返回其 username
+        res.json({ username: results[0].username });
+      } else {
+        res.status(404).send({ error: "用戶不存在" });
+      }
+    }
+  );
+});
+
 // 查詢 reputation_score
 app.get("/Users/:userId/reputation_score", (req, res) => {
   const { userId } = req.params;
