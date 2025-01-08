@@ -61,7 +61,7 @@ app.get("/users", (req, res) => {
 app.post("/register", async (req, res) => {
     const { username, email, password } = req.body;
 
-    // 驗證輸入數據
+    // 驗證輸入資料
     if (!username || !email || !password) {
         return res.status(400).send({ error: "所有欄位都是必填的！" });
     }
@@ -82,7 +82,7 @@ app.post("/register", async (req, res) => {
         // 加密密碼
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // 插入用戶數據到資料庫
+        // 插入用戶資料到資料庫
         const result = await new Promise((resolve, reject) => {
             db.query(
                 "INSERT INTO Users (username, email, password_hash, registered_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
@@ -105,7 +105,7 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
-    // 驗證輸入數據
+    // 驗證輸入資料
     if (!email || !password) {
         return res.status(400).send({ error: "電子郵件和密碼是必填的！" });
     }
@@ -137,6 +137,29 @@ app.post("/login", async (req, res) => {
         console.error("登入錯誤:", error);
         res.status(500).send({ error: "伺服器錯誤！" });
     }
+});
+
+// 查詢 reputation_score
+app.get("/Users/:userId/reputation_score", (req, res) => {
+  const { userId } = req.params;
+
+  db.query(
+      "SELECT reputation_score FROM Users WHERE user_id = ?",
+      [userId],
+      (err, results) => {
+          if (err) {
+              console.error("查詢分數錯誤:", err);
+              return res.status(500).send({ error: "伺服器錯誤" });
+          }
+
+          if (results.length > 0) {
+              // 如果找到該用戶，返回其 reputation_score
+              res.json({ score: results[0].reputation_score });
+          } else {
+              res.status(404).send({ error: "用戶不存在" });
+          }
+      }
+  );
 });
 
 
