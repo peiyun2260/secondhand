@@ -44,6 +44,7 @@ app.get("/", (req, res) => {
 
 // 用戶管理 API
 const JWT_SECRET = process.env.JWT_SECRET;
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
 // 查詢所有 user
@@ -94,7 +95,16 @@ app.post("/register", async (req, res) => {
             );
         });
 
-        res.status(201).send({ message: "註冊成功！", userId: result.insertId });
+        const userId = result.insertId;
+        // 生成 JWT Token
+        const token = jwt.sign({ id: userId, email }, JWT_SECRET, { expiresIn: "1h" });
+
+        res.status(201).send({
+            message: "註冊成功！",
+            userId: userId,
+            token: token
+        });
+        
     } catch (error) {
         console.error("註冊錯誤:", error);
         res.status(500).send({ error: "伺服器錯誤！" });
