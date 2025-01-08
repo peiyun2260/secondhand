@@ -8,14 +8,23 @@ const app = express();
 app.use(bodyParser.json());
 app.use(
   cors({
-    origin: ["https://secondhandhand22.wixsite.com/",
+    origin: ["https://secondhandhand22.wixsite.com",
             "https://secondhandhand22.wixsite.com/my-site-1", 
             "http://localhost:3000"],
-            
+
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
+
+// 明確處理預檢請求
+app.options("*", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(204);
+});
 
 const db = mysql.createPool({
   host: process.env.DB_HOST,
@@ -32,7 +41,6 @@ app.get("/", (req, res) => {
   res.send("伺服器已啟動");
 });
 
-app.options("*", cors());
 
 // 用戶管理 API
 const JWT_SECRET = process.env.JWT_SECRET;
