@@ -19,7 +19,7 @@ app.use(
   })
 );
 
-明確處理預檢請求
+// 明確處理預檢請求
 app.options("*", (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.setHeader(
