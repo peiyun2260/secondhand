@@ -14,7 +14,7 @@ app.use(
       "http://localhost:3000",
     ],
 
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
   })
 );
@@ -24,7 +24,7 @@ app.options("*", (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS"
+    "GET, POST, PUT, DELETE, OPTIONS, PATCH"
   );
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -610,6 +610,97 @@ app.get("/api/getUserReviews/:buyerId", (req, res) => {
     }
 
     res.status(200).send(results);
+  });
+});
+
+//取得訊息 (GET /messages?senderId=xxx&receiverId=yyy)
+app.get("/messages", (req, res) => {
+  const { senderId, receiverId } = req.query;
+  if (!senderId || !receiverId) {
+    return res
+      .status(400)
+      .json({ error: "senderId 與 receiverId 為必填參數" });
+  }
+
+  const sql = `
+    SELECT * FROM Messages
+    WHERE 
+      (sender_id = ? AND receiver_id = ?)
+      OR
+      (sender_id = ? AND receiver_id = ?)
+    ORDER BY send_at ASC
+  `;
+  db.query(sql, [senderId, receiverId, receiverId, senderId], (err, results) => {
+    if (err) {
+      console.error("GET /messages error:", err);
+      return res.status(500).json({ error: "資料庫錯誤" });
+    }
+    res.json(results);
+  });
+});
+
+// 2) 新增訊息 (POST /messages)
+app.post("/messages", (req, res) => {
+  const { senderId, receiverId, content } = req.body;
+  if (!senderId || !receiverId || !content) {
+    return res
+      .status(400)
+      .json({ error: "senderId, receiverId, content 都是必填" });
+  }
+
+  const sql = `
+    INSERT INTO Messages (sender_id, receiver_id, content, status)
+    VALUES (?, ?, ?, 'unread')
+  `;
+  db.query(sql, [senderId, receiverId, content], (err, result) => {
+    if (err) {
+      console.error("POST /messages error:", err);
+      return res.status(500).json({ error: "資料庫錯誤" });
+    }
+
+    const insertedId = result.insertId;
+    // 回頭查詢剛插入的訊息，回傳給前端
+    db.query(
+      "SELECT * FROM Messages WHERE message_id = ?",
+      [insertedId],
+      (err2, rows) => {
+        if (err2) {
+          console.error("查詢新插入訊息時錯誤:", err2);
+          return res
+            .status(500)
+            .json({ error: "插入成功但回傳訊息時發生錯誤" });
+        }
+        res.status(201).json(rows[0]);
+      }
+    );
+  });
+});
+
+// 3) 標記已讀 (PATCH /messages/read)
+// body: { senderId, receiverId }
+// 這意思是「對方(sender) 傳給我(receiver) 的所有未讀訊息」，全部標記為 read
+app.patch("/messages/read", (req, res) => {
+  const { senderId, receiverId } = req.body;
+  if (!senderId || !receiverId) {
+    return res
+      .status(400)
+      .json({ error: "senderId、receiverId 都是必填" });
+  }
+
+  const sql = `
+    UPDATE Messages
+    SET status = 'read'
+    WHERE sender_id = ?
+      AND receiver_id = ?
+      AND status = 'unread'
+  `;
+  db.query(sql, [senderId, receiverId], (err, result) => {
+    if (err) {
+      console.error("PATCH /messages/read error:", err);
+      return res.status(500).json({ error: "資料庫錯誤" });
+    }
+
+    res.json({ updated: result.affectedRows });
   });
 });
 
