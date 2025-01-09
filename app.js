@@ -95,7 +95,8 @@ app.post("/register", async (req, res) => {
     const result = await new Promise((resolve, reject) => {
       db.query(
         `INSERT INTO Users (username, email, password_hash, registered_at, updated_at) 
-        VALUES (?, ?, ?, NOW(), NOW())`[(username, email, hashedPassword)],
+        VALUES (?, ?, ?, NOW(), NOW())`,
+        [(username, email, hashedPassword)],
         (err, results) => {
           if (err) reject(err);
           else resolve(results);
@@ -316,12 +317,12 @@ app.get("/products", (req, res) => {
   `;
 
   db.query(query, (err, results) => {
-      if (err) {
-          console.error("Error fetching products:", err);
-          res.status(500).send({ error: "伺服器錯誤，無法取得商品列表" });
-      } else {
-          res.status(200).json(results);
-      }
+    if (err) {
+      console.error("Error fetching products:", err);
+      res.status(500).send({ error: "伺服器錯誤，無法取得商品列表" });
+    } else {
+      res.status(200).json(results);
+    }
   });
 });
 
@@ -330,7 +331,7 @@ app.post("/products/update", (req, res) => {
   const { productId, status } = req.body;
 
   if (!productId || !status) {
-      return res.status(400).send({ error: "缺少必要的商品 ID 或狀態" });
+    return res.status(400).send({ error: "缺少必要的商品 ID 或狀態" });
   }
 
   const query = `
@@ -340,15 +341,14 @@ app.post("/products/update", (req, res) => {
   `;
 
   db.query(query, [status, productId], (err, result) => {
-      if (err) {
-          console.error("Error updating product status:", err);
-          res.status(500).send({ error: "伺服器錯誤，無法更新商品狀態" });
-      } else {
-          res.status(200).send({ message: "商品狀態更新成功" });
-      }
+    if (err) {
+      console.error("Error updating product status:", err);
+      res.status(500).send({ error: "伺服器錯誤，無法更新商品狀態" });
+    } else {
+      res.status(200).send({ message: "商品狀態更新成功" });
+    }
   });
 });
-
 
 // 建立訂單 API
 app.post("/api/createOrder", (req, res) => {
@@ -666,9 +666,7 @@ app.get("/api/getUserReviews/:buyerId", (req, res) => {
 app.get("/messages", (req, res) => {
   const { senderId, receiverId } = req.query;
   if (!senderId || !receiverId) {
-    return res
-      .status(400)
-      .json({ error: "senderId 與 receiverId 為必填參數" });
+    return res.status(400).json({ error: "senderId 與 receiverId 為必填參數" });
   }
 
   const sql = `
@@ -679,13 +677,17 @@ app.get("/messages", (req, res) => {
       (sender_id = ? AND receiver_id = ?)
     ORDER BY sent_at ASC
   `;
-  db.query(sql, [senderId, receiverId, receiverId, senderId], (err, results) => {
-    if (err) {
-      console.error("GET /messages error:", err);
-      return res.status(500).json({ error: "資料庫錯誤" });
+  db.query(
+    sql,
+    [senderId, receiverId, receiverId, senderId],
+    (err, results) => {
+      if (err) {
+        console.error("GET /messages error:", err);
+        return res.status(500).json({ error: "資料庫錯誤" });
+      }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 // 2) 新增訊息 (POST /messages)
@@ -731,9 +733,7 @@ app.post("/messages", (req, res) => {
 app.patch("/messages/read", (req, res) => {
   const { senderId, receiverId } = req.body;
   if (!senderId || !receiverId) {
-    return res
-      .status(400)
-      .json({ error: "senderId、receiverId 都是必填" });
+    return res.status(400).json({ error: "senderId、receiverId 都是必填" });
   }
 
   const sql = `
