@@ -434,7 +434,7 @@ app.post("/api/createOrder", (req, res) => {
   });
 });
 
-// 更新訂單狀態API
+// 更新訂單狀態 API
 app.patch("/api/updateOrder/:orderId", (req, res) => {
   const orderId = req.params.orderId;
 
@@ -459,6 +459,74 @@ app.patch("/api/updateOrder/:orderId", (req, res) => {
     }
 
     res.status(200).send({ message: "訂單狀態已成功更新為 completed" });
+  });
+});
+
+// 獲取買家訂單資訊 API
+app.get("/api/getOrders/buyer/:buyerId", (req, res) => {
+  const buyerId = req.params.buyerId;
+
+  if (!buyerId) {
+    return res.status(400).send("缺少買家 ID");
+  }
+
+  const query = `
+      SELECT 
+        o.order_id,
+        o.status AS order_status,
+        p.product_id,
+        p.name AS product_name,
+        p.status AS product_status
+      FROM Orders o
+      INNER JOIN Products p ON o.product_id = p.product_id
+      WHERE o.buyer_id = ?
+    `;
+
+  db.query(query, [buyerId], (err, results) => {
+    if (err) {
+      console.error("無法獲取訂單資訊：", err);
+      return res.status(500).send("伺服器錯誤");
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send("未找到相關訂單");
+    }
+
+    res.status(200).json(results);
+  });
+});
+
+// 獲取賣家訂單資訊 API
+app.get("/api/getorders/seller/:sellerId", (req, res) => {
+  const sellerId = req.params.sellerId;
+
+  if (!sellerId) {
+    return res.status(400).send("缺少賣家 ID");
+  }
+
+  const query = `
+      SELECT 
+        o.order_id,
+        o.status AS order_status,
+        p.product_id,
+        p.name AS product_name,
+        p.status AS product_status
+      FROM Orders o
+      INNER JOIN Products p ON o.product_id = p.product_id
+      WHERE o.seller_id = ?
+    `;
+
+  db.query(query, [sellerId], (err, results) => {
+    if (err) {
+      console.error("無法獲取訂單資訊：", err);
+      return res.status(500).send("伺服器錯誤");
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send("未找到相關訂單");
+    }
+
+    res.status(200).json(results);
   });
 });
 
