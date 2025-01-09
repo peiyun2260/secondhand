@@ -95,7 +95,7 @@ app.post("/register", async (req, res) => {
     const result = await new Promise((resolve, reject) => {
       db.query(
         "INSERT INTO Users (username, email, password_hash, registered_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
-        [(username, email, hashedPassword)],
+        [username, email, hashedPassword],
         (err, results) => {
           if (err) reject(err);
           else resolve(results);
