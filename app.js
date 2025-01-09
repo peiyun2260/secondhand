@@ -94,8 +94,8 @@ app.post("/register", async (req, res) => {
     // 插入用戶資料到資料庫
     const result = await new Promise((resolve, reject) => {
       db.query(
-        "INSERT INTO Users (username, email, password_hash, registered_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
-        [username, email, hashedPassword],
+        `INSERT INTO Users (username, email, password_hash, registered_at, updated_at) 
+        VALUES (?, ?, ?, NOW(), NOW())`[(username, email, hashedPassword)],
         (err, results) => {
           if (err) reject(err);
           else resolve(results);
@@ -184,6 +184,93 @@ app.get("/Users/:userId/username", (req, res) => {
       if (results.length > 0) {
         // 如果找到該用戶，返回其 username
         res.json({ username: results[0].username });
+      } else {
+        res.status(404).send({ error: "用戶不存在" });
+      }
+    }
+  );
+});
+
+// 更新 username
+app.put("/Users/:userId/updateUsername", (req, res) => {
+  const { userId } = req.params;
+  const { username } = req.body;
+
+  // 驗證輸入
+  if (!username) {
+    return res.status(400).send({ error: "用戶名稱為必填項！" });
+  }
+
+  // 更新 username
+  db.query(
+    "UPDATE Users SET username = ? WHERE user_id = ?",
+    [username, userId],
+    (err, results) => {
+      if (err) {
+        console.error("更新用戶名稱錯誤:", err);
+        return res.status(500).send({ error: "伺服器錯誤" });
+      }
+
+      if (results.affectedRows > 0) {
+        res.status(200).send({ message: "用戶名稱更新成功！" });
+      } else {
+        res.status(404).send({ error: "用戶不存在" });
+      }
+    }
+  );
+});
+
+// 查詢 email
+app.get("/Users/:userId/email", (req, res) => {
+  const { userId } = req.params;
+
+  db.query(
+    "SELECT email FROM Users WHERE user_id = ?",
+    [userId],
+    (err, results) => {
+      if (err) {
+        console.error("查詢用戶 email 錯誤:", err);
+        return res.status(500).send({ error: "伺服器錯誤" });
+      }
+
+      if (results.length > 0) {
+        // 如果找到該用戶，返回其 email
+        res.json({ email: results[0].email });
+      } else {
+        res.status(404).send({ error: "用戶不存在" });
+      }
+    }
+  );
+});
+
+// 更新 email
+app.put("/Users/:userId/updateEmail", (req, res) => {
+  const { userId } = req.params;
+  const { email } = req.body;
+
+  // 驗證輸入
+  if (!email) {
+    return res.status(400).send({ error: "電子郵件為必填項！" });
+  }
+
+  // 檢查 email 格式是否有效
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).send({ error: "無效的電子郵件地址！" });
+  }
+
+  // 更新 email
+  db.query(
+    "UPDATE Users SET email = ? WHERE user_id = ?",
+    [email, userId],
+    (err, results) => {
+      if (err) {
+        console.error("更新用戶 email 錯誤:", err);
+        return res.status(500).send({ error: "伺服器錯誤" });
+      }
+
+      if (results.affectedRows > 0) {
+        res.status(200).send({ message: "電子郵件更新成功！" });
       } else {
         res.status(404).send({ error: "用戶不存在" });
       }
