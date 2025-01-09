@@ -677,7 +677,7 @@ app.get("/messages", (req, res) => {
       (sender_id = ? AND receiver_id = ?)
       OR
       (sender_id = ? AND receiver_id = ?)
-    ORDER BY send_at ASC
+    ORDER BY sent_at ASC
   `;
   db.query(sql, [senderId, receiverId, receiverId, senderId], (err, results) => {
     if (err) {
