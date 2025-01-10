@@ -18,19 +18,25 @@ app.use(cors({
     exposedHeaders: ["Content-Range", "X-Content-Range"]
 }));
 
-// app.use(bodyParser.json());
-// app.use(
-//   cors({
-//     origin: [
-//       "https://secondhandhand22.wixsite.com",
-//       "https://secondhandhand22.wixsite.com/my-site-1",
-//       "http://localhost:3000",
-//     ],
+app.options("*", (req, res) => {
+  const allowedOrigins = [
+    "https://secondhandhand22.wixsite.com",
+    "https://secondhandhand22.wixsite.com/my-site-1",
+    "http://localhost:3000",
+  ];
 
-//     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-//     credentials: true,
-//   })
-// );
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin); 
+  }
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(204);
+});
 
 // 明確處理預檢請求
 // app.options("*", (req, res) => {
