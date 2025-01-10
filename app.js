@@ -378,7 +378,7 @@ app.get("/Users/:userId/reputation_score", (req, res) => {
   );
 });
 
-app.post("/products/add", authenticate, (req, res) => {
+app.post("/Products/add", authenticate, (req, res) => {
   const { name, price, description, status, imageUrl } = req.body;
   // 這裡前端會傳單張圖的 URL，如果是多張，可以改成 array
   const sellerId = req.user.id; // 從 token 拿到 user_id
@@ -424,7 +424,7 @@ app.post("/products/add", authenticate, (req, res) => {
 });
 
 // 更新商品狀態 API
-app.post("/products/update", authenticate, (req, res) => {
+app.post("/Products/update", authenticate, (req, res) => {
   const { productId, status } = req.body;
   const sellerId = req.user.id; // 從 Token 中獲取用戶 ID
 
@@ -772,7 +772,7 @@ app.get("/api/getUserReviews/:buyerId", (req, res) => {
   });
 });
 
-app.get("/products/:productId", (req, res) => {
+app.get("/Products/:productId", (req, res) => {
   const { productId } = req.params;
   const sql = `
     SELECT 
@@ -785,7 +785,7 @@ app.get("/products/:productId", (req, res) => {
   `;
   db.query(sql, [productId], (err, results) => {
     if (err) {
-      console.error("GET /products/:productId error:", err);
+      console.error("GET /Products/:productId error:", err);
       return res.status(500).json({ error: "資料庫錯誤" });
     }
     if (results.length === 0) {
@@ -796,7 +796,7 @@ app.get("/products/:productId", (req, res) => {
 });
 
 // 撈所有商品 + 其對應圖片
-app.get("/products", authenticate, (req, res) => {
+app.get("/Products", authenticate, (req, res) => {
   const sql = `
     SELECT 
       p.product_id, 
@@ -816,7 +816,7 @@ app.get("/products", authenticate, (req, res) => {
 
   db.query(sql, (err, results) => {
     if (err) {
-      console.error("GET /products error:", err);
+      console.error("GET /Products error:", err);
       return res.status(500).json({ error: "資料庫錯誤" });
     }
 
