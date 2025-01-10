@@ -6,6 +6,8 @@ require("dotenv").config();
 const app = express();
 const authenticate = require('./authenticate');
 
+
+
 app.use(bodyParser.json());
 app.use(
   cors({
@@ -42,6 +44,34 @@ const db = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
 });
+
+// **插入 authenticate 中介層程式碼**
+const authenticate = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  // 確保有 Authorization Header
+  if (!authHeader) {
+    return res.status(401).send({ error: "未授權，請提供 Token" });
+  }
+
+  // 提取 Bearer Token
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).send({ error: "Token 格式錯誤" });
+  }
+
+  try {
+    // 驗證 Token 並提取用戶信息
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = user; // 將用戶信息附加到 req
+    console.log("Authenticated user:", req.user); // 可用於調試
+    next(); // 繼續執行後續邏輯
+  } catch (error) {
+    console.error("Token 驗證失敗:", error);
+    return res.status(403).send({ error: "無效的 Token" });
+  }
+};
+
 
 app.get("/", (req, res) => {
   res.send("伺服器已啟動");
