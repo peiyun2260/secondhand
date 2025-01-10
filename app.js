@@ -678,7 +678,7 @@ app.get("/products/:productId", (req, res) => {
 
   db.query(sql, [productId], (err, results) => {
     if (err) {
-      console.error("GET /api/products/:productId error:", err);
+      console.error("GET /products/:productId error:", err);
       return res.status(500).json({ error: "資料庫錯誤" });
     }
 
@@ -688,6 +688,62 @@ app.get("/products/:productId", (req, res) => {
 
     // 返回賣家資訊
     res.status(200).json(results[0]);
+  });
+});
+
+// POST /messages/initiate - 初始化聯絡人
+app.post("/messages/initiate", (req, res) => {
+  const { senderId, receiverId } = req.body;
+
+  if (!senderId || !receiverId) {
+    return res.status(400).json({ error: "senderId 和 receiverId 為必填參數" });
+  }
+
+  const sql = `
+    INSERT IGNORE INTO Messages (sender_id, receiver_id, content, sent_at, status)
+    VALUES (?, ?, '[聯絡初始化]', CURRENT_TIMESTAMP, 'read')
+  `;
+
+  db.query(sql, [senderId, receiverId], (err, results) => {
+    if (err) {
+      console.error("POST /messages/initiate error:", err);
+      return res.status(500).json({ error: "資料庫錯誤" });
+    }
+
+    res.status(201).json({ message: "聯絡初始化成功" });
+  });
+});
+
+// GET /contacts/:userId - 獲取聯絡人列表
+app.get("/contacts/:userId", (req, res) => {
+  const { userId } = req.params;
+
+  const sql = `
+    SELECT 
+      CASE 
+        WHEN sender_id = ? THEN receiver_id 
+        ELSE sender_id 
+      END AS contact_id,
+      MAX(sent_at) AS last_message_time,
+      (SELECT content FROM Messages 
+       WHERE 
+         (sender_id = contact_id AND receiver_id = ?) OR 
+         (sender_id = ? AND receiver_id = contact_id)
+       ORDER BY sent_at DESC
+       LIMIT 1) AS last_message
+    FROM Messages
+    WHERE sender_id = ? OR receiver_id = ?
+    GROUP BY contact_id
+    ORDER BY last_message_time DESC
+  `;
+
+  db.query(sql, [userId, userId, userId, userId, userId], (err, results) => {
+    if (err) {
+      console.error("GET /contacts/:userId error:", err);
+      return res.status(500).json({ error: "資料庫錯誤" });
+    }
+
+    res.json(results);
   });
 });
 
