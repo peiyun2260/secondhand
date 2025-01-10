@@ -661,6 +661,36 @@ app.get("/api/getUserReviews/:buyerId", (req, res) => {
   });
 });
 
+// GET /products/:productId - 獲取商品的賣家資訊
+app.get("/products/:productId", (req, res) => {
+  const { productId } = req.params;
+
+  // 只查詢必要的字段，例如賣家 ID 和賣家名稱
+  const sql = `
+    SELECT 
+      p.seller_id AS sellerId, 
+      u.username AS sellerName
+    FROM Products p
+    JOIN Users u ON p.seller_id = u.user_id
+    WHERE p.product_id = ?
+    LIMIT 1;
+  `;
+
+  db.query(sql, [productId], (err, results) => {
+    if (err) {
+      console.error("GET /api/products/:productId error:", err);
+      return res.status(500).json({ error: "資料庫錯誤" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "未找到商品或賣家資訊" });
+    }
+
+    // 返回賣家資訊
+    res.status(200).json(results[0]);
+  });
+});
+
 //取得訊息 (GET /messages?senderId=xxx&receiverId=yyy)
 app.get("/messages", (req, res) => {
   const { senderId, receiverId } = req.query;
