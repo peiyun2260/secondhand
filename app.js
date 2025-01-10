@@ -797,6 +797,8 @@ app.get("/Products/:product_id", (req, res) => {
 
 // 撈所有商品 + 其對應圖片
 app.get("/Products", authenticate, (req, res) => {
+  const seller_id = req.user.id; // 從 Token 解碼的 user_id
+  
   const sql = `
     SELECT 
       p.product_id, 
@@ -811,10 +813,11 @@ app.get("/Products", authenticate, (req, res) => {
       pi.image_url
     FROM Products p
     LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
+    WHERE p.seller_id = ? -- 僅撈取當前 Token 對應用戶的商品
     ORDER BY p.product_id DESC
   `;
 
-  db.query(sql, (err, results) => {
+  db.query(sql, [seller_id], (err, results) => {
     if (err) {
       console.error("GET /Products error:", err);
       return res.status(500).json({ error: "資料庫錯誤" });
@@ -848,6 +851,7 @@ app.get("/Products", authenticate, (req, res) => {
     res.status(200).json(finalData);
   });
 });
+
 
 
 // POST /messages/initiate - 初始化聯絡人
