@@ -379,11 +379,11 @@ app.get("/Users/:userId/reputation_score", (req, res) => {
 });
 
 app.post("/Products/add", authenticate, (req, res) => {
-  const { name, price, description, status, imageUrl } = req.body;
+  const { name, price, description, status, imageurl } = req.body;
   // 這裡前端會傳單張圖的 URL，如果是多張，可以改成 array
-  const sellerId = req.user.id; // 從 token 拿到 user_id
+  const seller_id = req.user.id; // 從 token 拿到 user_id
 
-  if (!name || !price || !description || !status || !imageUrl) {
+  if (!name || !price || !description || !status || !imageurl) {
     return res.status(400).send({ error: "缺少必要的商品資訊" });
   }
 
@@ -394,22 +394,22 @@ app.post("/Products/add", authenticate, (req, res) => {
   `;
   db.query(
     queryProduct,
-    [sellerId, name, price, description, status],
+    [seller_id, name, price, description, status],
     (err, result) => {
       if (err) {
         console.error("新增商品失敗:", err);
         return res.status(500).send({ error: "伺服器錯誤，無法新增商品" });
       }
 
-      const newProductId = result.insertId;
-      console.log("新商品 ID:", newProductId);
+      const newproduct_id = result.insertId;
+      console.log("新商品 ID:", newproduct_id);
 
       // Step 2: 再插入 ProductImages (這裡假設只有一張)
-      const queryImage = `
+      const Imagequery = `
         INSERT INTO ProductImages (product_id, image_url) 
         VALUES (?, ?);
       `;
-      db.query(queryImage, [newProductId, imageUrl], (err2, result2) => {
+      db.query(queryImage, [newproduct_id, imageurl], (err2, result2) => {
         if (err2) {
           console.error("新增商品圖片失敗:", err2);
           return res.status(500).send({ error: "伺服器錯誤，無法新增圖片" });
@@ -417,7 +417,7 @@ app.post("/Products/add", authenticate, (req, res) => {
 
         return res
           .status(201)
-          .send({ message: "商品與圖片已成功新增", productId: newProductId });
+          .send({ message: "商品與圖片已成功新增", product_id: newproduct_id });
       });
     }
   );
@@ -425,10 +425,10 @@ app.post("/Products/add", authenticate, (req, res) => {
 
 // 更新商品狀態 API
 app.post("/Products/update", authenticate, (req, res) => {
-  const { productId, status } = req.body;
-  const sellerId = req.user.id; // 從 Token 中獲取用戶 ID
+  const { product_id, status } = req.body;
+  const seller_id = req.user.id; // 從 Token 中獲取用戶 ID
 
-  if (!productId || !status) {
+  if (!product_id || !status) {
     return res.status(400).send({ error: "缺少必要的商品 ID 或狀態" });
   }
 
@@ -437,7 +437,7 @@ app.post("/Products/update", authenticate, (req, res) => {
       SET status = ?
       WHERE product_id = ? AND seller_id = ?;
   `;
-  db.query(query, [status, productId, sellerId], (err, result) => {
+  db.query(query, [status, product_id, seller_id], (err, result) => {
     if (err) {
       console.error("Error updating product status:", err);
       res.status(500).send({ error: "伺服器錯誤，無法更新商品狀態" });
@@ -452,10 +452,10 @@ app.post("/Products/update", authenticate, (req, res) => {
 
 // 建立訂單 API
 app.post("/api/createOrder", (req, res) => {
-  const { productId, buyerEmail, tradeTime, tradeLocation } = req.body;
+  const { product_id, buyerEmail, tradeTime, tradeLocation } = req.body;
 
   // 驗證輸入資料是否完整
-  if (!productId || !buyerEmail || !tradeTime || !tradeLocation) {
+  if (!product_id || !buyerEmail || !tradeTime || !tradeLocation) {
     return res.status(400).send("缺少必要的訂單資訊");
   }
 
@@ -506,7 +506,7 @@ app.post("/api/createOrder", (req, res) => {
           // 查找 Seller ID 和 Total Amount
           connection.query(
             getSellerIdQuery,
-            [productId],
+            [product_id],
             (sellerErr, sellerResult) => {
               if (sellerErr || sellerResult.length === 0) {
                 console.error(
@@ -526,7 +526,7 @@ app.post("/api/createOrder", (req, res) => {
               connection.query(
                 insertOrderQuery,
                 [
-                  productId,
+                  product_id,
                   sellerId,
                   buyerId,
                   totalAmount,
@@ -545,7 +545,7 @@ app.post("/api/createOrder", (req, res) => {
                   // 更新商品狀態
                   connection.query(
                     updateProductQuery,
-                    [productId],
+                    [product_id],
                     (updateErr) => {
                       if (updateErr) {
                         console.error("無法更新商品狀態：", updateErr);
@@ -691,10 +691,10 @@ app.get("/api/getOrders/seller/:sellerId", (req, res) => {
 
 // 新增評論API
 app.post("/api/addReview", (req, res) => {
-  const { productId, buyerId, reviewText, rating } = req.body;
+  const { product_id, buyerId, reviewText, rating } = req.body;
 
   // 驗證輸入的完整性
-  if (!productId || !buyerId || !reviewText || !rating) {
+  if (!product_id || !buyerId || !reviewText || !rating) {
     return res.status(400).send("缺少必要的評論資訊");
   }
 
@@ -705,7 +705,7 @@ app.post("/api/addReview", (req, res) => {
 
   db.query(
     addReviewQuery,
-    [productId, buyerId, reviewText, rating],
+    [product_id, buyerId, reviewText, rating],
     (err, result) => {
       if (err) {
         console.error("無法新增評論：", err);
@@ -721,11 +721,11 @@ app.post("/api/addReview", (req, res) => {
 });
 
 // 讀取特定商品的評論API
-app.get("/api/getReviews/:productId", (req, res) => {
-  const { productId } = req.params;
+app.get("/api/getReviews/:product_id", (req, res) => {
+  const { product_id } = req.params;
 
   // 驗證商品 ID 是否存在
-  if (!productId) {
+  if (!product_id) {
     return res.status(400).send("缺少商品 ID");
   }
 
@@ -736,7 +736,7 @@ app.get("/api/getReviews/:productId", (req, res) => {
     ORDER BY review_date DESC
   `;
 
-  db.query(getReviewsQuery, [productId], (err, results) => {
+  db.query(getReviewsQuery, [product_id], (err, results) => {
     if (err) {
       console.error("無法讀取評論：", err);
       return res.status(500).send("讀取評論時發生錯誤");
@@ -772,20 +772,20 @@ app.get("/api/getUserReviews/:buyerId", (req, res) => {
   });
 });
 
-app.get("/Products/:productId", (req, res) => {
-  const { productId } = req.params;
+app.get("/Products/:product_id", (req, res) => {
+  const { product_id } = req.params;
   const sql = `
     SELECT 
-      p.seller_id AS sellerId,
+      p.seller_id AS seller_id,
       u.username AS sellerName
     FROM Products p
     JOIN Users u ON p.seller_id = u.user_id
     WHERE p.product_id = ?
     LIMIT 1;
   `;
-  db.query(sql, [productId], (err, results) => {
+  db.query(sql, [product_id], (err, results) => {
     if (err) {
-      console.error("GET /Products/:productId error:", err);
+      console.error("GET /Products/:product_id error:", err);
       return res.status(500).json({ error: "資料庫錯誤" });
     }
     if (results.length === 0) {
@@ -825,8 +825,8 @@ app.get("/Products", authenticate, (req, res) => {
     for (const row of results) {
       if (!productMap[row.product_id]) {
         productMap[row.product_id] = {
-          productId: row.product_id,
-          sellerId: row.seller_id,
+          product_id: row.product_id,
+          seller_id: row.seller_id,
           name: row.name,
           description: row.description,
           price: row.price,
@@ -838,7 +838,7 @@ app.get("/Products", authenticate, (req, res) => {
       }
       if (row.image_url) {
         productMap[row.product_id].images.push({
-          imageId: row.image_id,
+          image_id: row.image_id,
           url: row.image_url
         });
       }
