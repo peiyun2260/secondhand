@@ -191,7 +191,7 @@ app.post("/login", async (req, res) => {
 });
 
 //從user_id抓all
-app.get("/users/:userId", (req, res) => {
+app.get("/Users/:userId", (req, res) => {
   const { userId } = req.params;
 
   const sql = `
