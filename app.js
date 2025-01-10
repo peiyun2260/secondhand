@@ -379,11 +379,11 @@ app.get("/Users/:userId/reputation_score", (req, res) => {
 });
 
 app.post("/Products/add", authenticate, (req, res) => {
-  const { name, price, description, status, imageurl } = req.body;
+  const { name, price, description, status, image_url } = req.body;
   // 這裡前端會傳單張圖的 URL，如果是多張，可以改成 array
   const seller_id = req.user.id; // 從 token 拿到 user_id
 
-  if (!name || !price || !description || !status || !imageurl) {
+  if (!name || !price || !description || !status || !image_url) {
     return res.status(400).send({ error: "缺少必要的商品資訊" });
   }
 
@@ -409,7 +409,7 @@ app.post("/Products/add", authenticate, (req, res) => {
         INSERT INTO ProductImages (product_id, image_url) 
         VALUES (?, ?);
       `;
-      db.query(queryImage, [newproduct_id, imageurl], (err2, result2) => {
+      db.query(queryImage, [newproduct_id, image_url], (err2, result2) => {
         if (err2) {
           console.error("新增商品圖片失敗:", err2);
           return res.status(500).send({ error: "伺服器錯誤，無法新增圖片" });
