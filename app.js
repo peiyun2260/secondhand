@@ -190,6 +190,31 @@ app.post("/login", async (req, res) => {
   }
 });
 
+//從user_id抓all
+app.get("/users/:userId", (req, res) => {
+  const { userId } = req.params;
+
+  const sql = `
+    SELECT * 
+    FROM Users 
+    WHERE user_id = ?
+    LIMIT 1
+  `;
+  db.query(sql, [userId], (err, results) => {
+    if (err) {
+      console.error("GET /users/:userId error:", err);
+      return res.status(500).json({ error: "資料庫錯誤" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "用戶不存在" });
+    }
+
+    res.status(200).json(results[0]);
+  });
+});
+
+
 // 查詢 username
 app.get("/Users/:userId/username", (req, res) => {
   const { userId } = req.params;
