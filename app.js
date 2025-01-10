@@ -301,6 +301,29 @@ app.get("/Users/:userId/reputation_score", (req, res) => {
   );
 });
 
+app.post("/products/add", authenticate, (req, res) => {
+  const { name, price, description, imageUrl, status } = req.body;
+  const sellerId = req.user.id; // 從 JWT Token 中獲取用戶 ID
+
+  if (!name || !price || !description || !imageUrl) {
+    return res.status(400).send({ error: "缺少必要的商品資訊" });
+  }
+
+  const query = `
+    INSERT INTO Products (seller_id, name, price, description, image_url, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, NOW());
+  `;
+
+  db.query(query, [sellerId, name, price, description, imageUrl, status], (err, result) => {
+    if (err) {
+      console.error("新增商品失敗:", err);
+      return res.status(500).send({ error: "伺服器錯誤，無法新增商品" });
+    }
+
+    res.status(201).send({ message: "商品已成功新增" });
+  });
+});
+
 app.get("/products", authenticate, (req, res) => {
   const sellerId = req.user.id; // 從 Token 中獲取當前用戶的 ID
 
