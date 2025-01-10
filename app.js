@@ -795,6 +795,61 @@ app.get("/products/:productId", (req, res) => {
   });
 });
 
+// 撈所有商品 + 其對應圖片
+app.get("/products", authenticate, (req, res) => {
+  const sql = `
+    SELECT 
+      p.product_id, 
+      p.seller_id, 
+      p.name, 
+      p.description, 
+      p.price, 
+      p.status,
+      p.created_at,
+      p.updated_at,
+      pi.image_id,
+      pi.image_url
+    FROM Products p
+    LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
+    ORDER BY p.product_id DESC
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("GET /products error:", err);
+      return res.status(500).json({ error: "資料庫錯誤" });
+    }
+
+    // group by product_id，將同一商品的多張圖片放到 images: []
+    const productMap = {};
+    for (const row of results) {
+      if (!productMap[row.product_id]) {
+        productMap[row.product_id] = {
+          productId: row.product_id,
+          sellerId: row.seller_id,
+          name: row.name,
+          description: row.description,
+          price: row.price,
+          status: row.status,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          images: []
+        };
+      }
+      if (row.image_url) {
+        productMap[row.product_id].images.push({
+          imageId: row.image_id,
+          url: row.image_url
+        });
+      }
+    }
+
+    const finalData = Object.values(productMap);
+    res.status(200).json(finalData);
+  });
+});
+
+
 // POST /messages/initiate - 初始化聯絡人
 app.post("/messages/initiate", (req, res) => {
   const { senderId, receiverId } = req.body;
