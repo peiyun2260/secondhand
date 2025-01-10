@@ -6,29 +6,31 @@ require("dotenv").config();
 const app = express();
 
 app.use(bodyParser.json());
-app.use(cors({
+app.use(
+  cors({
     origin: [
-        "https://secondhandhand22.wixsite.com",
-        "https://secondhandhand22.wixsite.com/my-site-1",
-        "http://localhost:3000"
+      "https://secondhandhand22.wixsite.com",
+      "https://secondhandhand22.wixsite.com/my-site-1",
+      "http://localhost:3000",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-    exposedHeaders: ["Content-Range", "X-Content-Range"]
-}));
+    exposedHeaders: ["Content-Range", "X-Content-Range"],
+  })
+);
 
 app.options("*", (req, res) => {
   const allowedOrigins = [
     "https://secondhandhand22.wixsite.com",
     "https://secondhandhand22.wixsite.com/my-site-1",
     "http://localhost:3000",
-    "https://editor.wix.com"
+    "https://editor.wix.com",
   ];
 
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin); 
+    res.setHeader("Access-Control-Allow-Origin", origin);
   }
   res.setHeader(
     "Access-Control-Allow-Methods",
@@ -503,7 +505,7 @@ app.post("/api/createOrder", (req, res) => {
 });
 
 // 更新訂單狀態 API
-app.patch("/api/updateOrder/:orderId", (req, res) => {
+app.post("/api/updateOrder/:orderId", (req, res) => {
   const orderId = req.params.orderId;
 
   if (!orderId) {
@@ -511,10 +513,10 @@ app.patch("/api/updateOrder/:orderId", (req, res) => {
   }
 
   const query = `
-          UPDATE Orders
-          SET status = 'completed'
-          WHERE order_id = ? AND status = 'pending'
-      `;
+            UPDATE Orders
+            SET status = 'completed'
+            WHERE order_id = ? AND status = 'pending'
+        `;
 
   db.query(query, [orderId], (err, result) => {
     if (err) {
@@ -539,25 +541,30 @@ app.get("/api/getOrders/buyer/:buyerId", (req, res) => {
   }
 
   const query = `
-      SELECT 
-        o.order_id,
-        o.status AS order_status,
-        p.product_id,
-        p.name AS product_name,
-        p.status AS product_status
-      FROM Orders o
-      INNER JOIN Products p ON o.product_id = p.product_id
-      WHERE o.buyer_id = ?
-    `;
+        SELECT 
+          o.order_id,
+          o.status AS order_status,
+          o.product_id,
+          p.name AS product_name,
+          p.seller_id,
+          u.username AS seller_name,
+          pi.image_url AS product_image_url
+        FROM orders o
+        JOIN products p ON o.product_id = p.product_id
+        JOIN users u ON p.seller_id = u.user_id
+        LEFT JOIN productImage pi ON p.product_id = pi.product_id
+        WHERE o.buyer_id = ?
+        ORDER BY o.order_date DESC
+      `;
 
   db.query(query, [buyerId], (err, results) => {
     if (err) {
-      console.error("無法獲取訂單資訊：", err);
-      return res.status(500).send("伺服器錯誤");
+      console.error("查詢訂單失敗：", err);
+      return res.status(500).send("查詢訂單失敗");
     }
 
     if (results.length === 0) {
-      return res.status(404).send("未找到相關訂單");
+      return res.status(404).send("目前無訂單");
     }
 
     res.status(200).json(results);
@@ -565,7 +572,7 @@ app.get("/api/getOrders/buyer/:buyerId", (req, res) => {
 });
 
 // 獲取賣家訂單資訊 API
-app.get("/api/getorders/seller/:sellerId", (req, res) => {
+app.get("/api/getOrders/seller/:sellerId", (req, res) => {
   const sellerId = req.params.sellerId;
 
   if (!sellerId) {
@@ -573,25 +580,30 @@ app.get("/api/getorders/seller/:sellerId", (req, res) => {
   }
 
   const query = `
-      SELECT 
-        o.order_id,
-        o.status AS order_status,
-        p.product_id,
-        p.name AS product_name,
-        p.status AS product_status
-      FROM Orders o
-      INNER JOIN Products p ON o.product_id = p.product_id
-      WHERE o.seller_id = ?
-    `;
+        SELECT 
+          o.order_id,
+          o.status AS order_status,
+          o.product_id,
+          p.name AS product_name,
+          o.buyer_id,
+          u.username AS buyer_name,
+          pi.image_url AS product_image_url
+        FROM orders o
+        JOIN products p ON o.product_id = p.product_id
+        JOIN users u ON o.buyer_id = u.user_id
+        LEFT JOIN productImage pi ON p.product_id = pi.product_id
+        WHERE o.seller_id = ?
+        ORDER BY o.order_date DESC
+      `;
 
   db.query(query, [sellerId], (err, results) => {
     if (err) {
-      console.error("無法獲取訂單資訊：", err);
-      return res.status(500).send("伺服器錯誤");
+      console.error("查詢訂單失敗：", err);
+      return res.status(500).send("查詢訂單失敗");
     }
 
     if (results.length === 0) {
-      return res.status(404).send("未找到相關訂單");
+      return res.status(404).send("目前無訂單");
     }
 
     res.status(200).json(results);
@@ -767,16 +779,19 @@ app.get("/contacts/:userId", (req, res) => {
     ORDER BY last_message_time DESC
   `;
 
-  db.query(sql, [userId, userId, userId, userId, userId, userId, userId, userId], (err, results) => {
-    if (err) {
-      console.error("GET /contacts/:userId error:", err);
-      return res.status(500).json({ error: "資料庫錯誤" });
+  db.query(
+    sql,
+    [userId, userId, userId, userId, userId, userId, userId, userId],
+    (err, results) => {
+      if (err) {
+        console.error("GET /contacts/:userId error:", err);
+        return res.status(500).json({ error: "資料庫錯誤" });
+      }
+
+      res.json(results);
     }
-
-    res.json(results);
-  });
+  );
 });
-
 
 //取得訊息 (GET /messages?senderId=xxx&receiverId=yyy)
 app.get("/messages", (req, res) => {
