@@ -405,7 +405,7 @@ app.post("/Products/add", authenticate, (req, res) => {
       console.log("新商品 ID:", newproduct_id);
 
       // Step 2: 再插入 ProductImages (這裡假設只有一張)
-      const Imagequery = `
+      const queryImage = `
         INSERT INTO ProductImages (product_id, image_url) 
         VALUES (?, ?);
       `;
