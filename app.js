@@ -813,7 +813,7 @@ app.get("/Products", authenticate, (req, res) => {
       pi.image_url
     FROM Products p
     LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
-    WHERE p.seller_id = ? -- 僅撈取當前 Token 對應用戶的商品
+    WHERE p.seller_id = ? -- 篩選當前登入者的商品
     ORDER BY p.product_id DESC
   `;
 
@@ -823,7 +823,7 @@ app.get("/Products", authenticate, (req, res) => {
       return res.status(500).json({ error: "資料庫錯誤" });
     }
 
-    // group by product_id，將同一商品的多張圖片放到 images: []
+    // 將同一商品的多張圖片分組
     const productMap = {};
     for (const row of results) {
       if (!productMap[row.product_id]) {
@@ -851,7 +851,6 @@ app.get("/Products", authenticate, (req, res) => {
     res.status(200).json(finalData);
   });
 });
-
 
 
 // POST /messages/initiate - 初始化聯絡人
