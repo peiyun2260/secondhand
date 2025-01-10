@@ -380,42 +380,47 @@ app.get("/Users/:userId/reputation_score", (req, res) => {
 });
 
 app.post("/products/add", authenticate, (req, res) => {
-  const { name, price, description, imageUrl, status } = req.body;
-  const sellerId = req.user.id;
+  const { name, price, description, status, imageUrl } = req.body;
+  // 這裡前端會傳單張圖的 URL，如果是多張，可以改成 array
+  const sellerId = req.user.id; // 從 token 拿到 user_id
 
-  if (!name || !price || !description || !imageUrl || !status) {
-      return res.status(400).send({ error: "缺少必要的商品資訊" });
+  if (!name || !price || !description || !status || !imageUrl) {
+    return res.status(400).send({ error: "缺少必要的商品資訊" });
   }
 
-  // 檢查資料庫中是否存在該賣家
+  // Step 1: 先插入 Products
+  const queryProduct = `
+    INSERT INTO Products (seller_id, name, price, description, status, created_at) 
+    VALUES (?, ?, ?, ?, ?, NOW());
+  `;
   db.query(
-      "SELECT * FROM Users WHERE user_id = ?",
-      [sellerId],
-      (err, results) => {
-          if (err) {
-              console.error("資料庫查詢錯誤：", err);
-              return res.status(500).send({ error: "伺服器錯誤" });
-          }
-          if (results.length === 0) {
-              console.error(`賣家 ID ${sellerId} 不存在`);
-              return res.status(404).send({ error: "賣家不存在" });
-          }
-
-          // 插入商品資料
-          const query = `
-              INSERT INTO Products (seller_id, name, price, description, image_url, status, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, NOW());
-          `;
-
-          db.query(query, [sellerId, name, price, description, imageUrl, status], (err, result) => {
-              if (err) {
-                  console.error("新增商品失敗:", err);
-                  return res.status(500).send({ error: "伺服器錯誤，無法新增商品" });
-              }
-
-              res.status(201).send({ message: "商品已成功新增", productId: result.insertId });
-          });
+    queryProduct,
+    [sellerId, name, price, description, status],
+    (err, result) => {
+      if (err) {
+        console.error("新增商品失敗:", err);
+        return res.status(500).send({ error: "伺服器錯誤，無法新增商品" });
       }
+
+      const newProductId = result.insertId;
+      console.log("新商品 ID:", newProductId);
+
+      // Step 2: 再插入 ProductImages (這裡假設只有一張)
+      const queryImage = `
+        INSERT INTO ProductImages (product_id, image_url) 
+        VALUES (?, ?);
+      `;
+      db.query(queryImage, [newProductId, imageUrl], (err2, result2) => {
+        if (err2) {
+          console.error("新增商品圖片失敗:", err2);
+          return res.status(500).send({ error: "伺服器錯誤，無法新增圖片" });
+        }
+
+        return res
+          .status(201)
+          .send({ message: "商品與圖片已成功新增", productId: newProductId });
+      });
+    }
   );
 });
 
@@ -425,7 +430,7 @@ app.post("/products/update", authenticate, (req, res) => {
   const sellerId = req.user.id; // 從 Token 中獲取用戶 ID
 
   if (!productId || !status) {
-      return res.status(400).send({ error: "缺少必要的商品 ID 或狀態" });
+    return res.status(400).send({ error: "缺少必要的商品 ID 或狀態" });
   }
 
   const query = `
@@ -433,16 +438,16 @@ app.post("/products/update", authenticate, (req, res) => {
       SET status = ?
       WHERE product_id = ? AND seller_id = ?;
   `;
-
   db.query(query, [status, productId, sellerId], (err, result) => {
-      if (err) {
-          console.error("Error updating product status:", err);
-          res.status(500).send({ error: "伺服器錯誤，無法更新商品狀態" });
-      } else if (result.affectedRows === 0) {
-          res.status(403).send({ error: "您無權修改此商品狀態" });
-      } else {
-          res.status(200).send({ message: "商品狀態更新成功" });
-      }
+    if (err) {
+      console.error("Error updating product status:", err);
+      res.status(500).send({ error: "伺服器錯誤，無法更新商品狀態" });
+    } else if (result.affectedRows === 0) {
+      // 代表沒更新任何東西 (可能是商品不存在，或不是自己的商品)
+      res.status(403).send({ error: "您無權修改此商品狀態" });
+    } else {
+      res.status(200).send({ message: "商品狀態更新成功" });
+    }
   });
 });
 
@@ -768,32 +773,25 @@ app.get("/api/getUserReviews/:buyerId", (req, res) => {
   });
 });
 
-// GET /products/:productId - 獲取商品的賣家資訊
 app.get("/products/:productId", (req, res) => {
   const { productId } = req.params;
-
-  // 只查詢必要的字段，例如賣家 ID 和賣家名稱
   const sql = `
     SELECT 
-      p.seller_id AS sellerId, 
+      p.seller_id AS sellerId,
       u.username AS sellerName
     FROM Products p
     JOIN Users u ON p.seller_id = u.user_id
     WHERE p.product_id = ?
     LIMIT 1;
   `;
-
   db.query(sql, [productId], (err, results) => {
     if (err) {
       console.error("GET /products/:productId error:", err);
       return res.status(500).json({ error: "資料庫錯誤" });
     }
-
     if (results.length === 0) {
       return res.status(404).json({ error: "未找到商品或賣家資訊" });
     }
-
-    // 返回賣家資訊
     res.status(200).json(results[0]);
   });
 });
