@@ -23,6 +23,7 @@ app.options("*", (req, res) => {
     "https://secondhandhand22.wixsite.com",
     "https://secondhandhand22.wixsite.com/my-site-1",
     "http://localhost:3000",
+    "https://editor.wix.com"
   ];
 
   const origin = req.headers.origin;
