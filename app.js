@@ -71,26 +71,26 @@ const db = mysql.createPool({
 const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
-  // 確保有 Authorization Header
   if (!authHeader) {
-    return res.status(401).send({ error: "未授權，請提供 Token" });
+      console.error("未提供 Authorization Header");
+      return res.status(401).send({ error: "未授權，請提供 Token" });
   }
 
-  // 提取 Bearer Token
   const token = authHeader.split(" ")[1];
   if (!token) {
-    return res.status(401).send({ error: "Token 格式錯誤" });
+      console.error("Token 格式錯誤");
+      return res.status(401).send({ error: "Token 格式錯誤" });
   }
 
   try {
-    // 驗證 Token 並提取用戶信息
-    const user = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = user; // 將用戶信息附加到 req
-    console.log("Authenticated user:", req.user); // 可用於調試
-    next(); // 繼續執行後續邏輯
+      // 驗證 Token 並打印解碼內容
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      console.log("解碼的 Token 資訊：", user); // 確認是否包含 id
+      req.user = user; // 將用戶資料附加到 req
+      next(); // 繼續執行後續邏輯
   } catch (error) {
-    console.error("Token 驗證失敗:", error);
-    return res.status(403).send({ error: "無效的 Token" });
+      console.error("Token 驗證失敗:", error.message);
+      return res.status(403).send({ error: "無效的 Token" });
   }
 };
 
@@ -381,51 +381,42 @@ app.get("/Users/:userId/reputation_score", (req, res) => {
 
 app.post("/products/add", authenticate, (req, res) => {
   const { name, price, description, imageUrl, status } = req.body;
-  const sellerId = req.user.id; // 從 JWT Token 中獲取用戶 ID
+  const sellerId = req.user.id;
 
-  if (!name || !price || !description || !imageUrl) {
-    return res.status(400).send({ error: "缺少必要的商品資訊" });
+  if (!name || !price || !description || !imageUrl || !status) {
+      return res.status(400).send({ error: "缺少必要的商品資訊" });
   }
 
-  const query = `
-    INSERT INTO Products (seller_id, name, price, description, image_url, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, NOW());
-  `;
+  // 檢查資料庫中是否存在該賣家
+  db.query(
+      "SELECT * FROM Users WHERE user_id = ?",
+      [sellerId],
+      (err, results) => {
+          if (err) {
+              console.error("資料庫查詢錯誤：", err);
+              return res.status(500).send({ error: "伺服器錯誤" });
+          }
+          if (results.length === 0) {
+              console.error(`賣家 ID ${sellerId} 不存在`);
+              return res.status(404).send({ error: "賣家不存在" });
+          }
 
-  db.query(query, [sellerId, name, price, description, imageUrl, status], (err, result) => {
-    if (err) {
-      console.error("新增商品失敗:", err);
-      return res.status(500).send({ error: "伺服器錯誤，無法新增商品" });
-    }
+          // 插入商品資料
+          const query = `
+              INSERT INTO Products (seller_id, name, price, description, image_url, status, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, NOW());
+          `;
 
-    res.status(201).send({ message: "商品已成功新增" });
-  });
-});
+          db.query(query, [sellerId, name, price, description, imageUrl, status], (err, result) => {
+              if (err) {
+                  console.error("新增商品失敗:", err);
+                  return res.status(500).send({ error: "伺服器錯誤，無法新增商品" });
+              }
 
-app.get("/products", authenticate, (req, res) => {
-  const sellerId = req.user.id; // 從 Token 中獲取當前用戶的 ID
-
-  const query = `
-      SELECT 
-          p.product_id AS productId, 
-          p.seller_id AS sellerId, 
-          p.name AS name, 
-          p.price AS price, 
-          p.status AS status, 
-          pi.image_url AS imageUrl
-      FROM Products p
-      LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
-      WHERE p.seller_id = ?; -- 僅返回當前用戶的商品
-  `;
-
-  db.query(query, [sellerId], (err, results) => {
-      if (err) {
-          console.error("Error fetching products:", err);
-          res.status(500).send({ error: "伺服器錯誤，無法取得商品列表" });
-      } else {
-          res.status(200).json(results);
+              res.status(201).send({ message: "商品已成功新增", productId: result.insertId });
+          });
       }
-  });
+  );
 });
 
 // 更新商品狀態 API
