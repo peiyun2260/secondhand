@@ -552,7 +552,7 @@ app.get("/api/getOrders/buyer/:buyerId", (req, res) => {
         FROM Orders o
         JOIN Products p ON o.product_id = p.product_id
         JOIN Users u ON p.seller_id = u.user_id
-        LEFT JOIN ProductImage pi ON p.product_id = pi.product_id
+        LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
         WHERE o.buyer_id = ?
         ORDER BY o.order_date DESC
       `;
@@ -591,7 +591,7 @@ app.get("/api/getOrders/seller/:sellerId", (req, res) => {
         FROM Orders o
         JOIN Products p ON o.product_id = p.product_id
         JOIN Users u ON o.buyer_id = u.user_id
-        LEFT JOIN ProductImage pi ON p.product_id = pi.product_id
+        LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
         WHERE o.seller_id = ?
         ORDER BY o.order_date DESC
       `;
