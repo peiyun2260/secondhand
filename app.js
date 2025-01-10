@@ -301,51 +301,56 @@ app.get("/Users/:userId/reputation_score", (req, res) => {
   );
 });
 
-// 獲取商品列表 API
-app.get("/products", (req, res) => {
+app.get("/products", authenticate, (req, res) => {
+  const sellerId = req.user.id; // 從 Token 中獲取用戶 ID
+
   const query = `
       SELECT 
           p.product_id AS productId, 
           p.seller_id AS sellerId, 
           p.name AS name, 
-          pi.image_url AS imageUrl, 
-          p.status AS status
+          p.price AS price, 
+          p.status AS status, 
+          pi.image_url AS imageUrl
       FROM Products p
       LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
-      GROUP BY p.product_id;
+      WHERE p.seller_id = ?;
   `;
 
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error("Error fetching products:", err);
-      res.status(500).send({ error: "伺服器錯誤，無法取得商品列表" });
-    } else {
-      res.status(200).json(results);
-    }
+  db.query(query, [sellerId], (err, results) => {
+      if (err) {
+          console.error("Error fetching products:", err);
+          res.status(500).send({ error: "伺服器錯誤，無法取得商品列表" });
+      } else {
+          res.status(200).json(results);
+      }
   });
 });
 
 // 更新商品狀態 API
-app.post("/products/update", (req, res) => {
+app.post("/products/update", authenticate, (req, res) => {
   const { productId, status } = req.body;
+  const sellerId = req.user.id; // 從 Token 中獲取用戶 ID
 
   if (!productId || !status) {
-    return res.status(400).send({ error: "缺少必要的商品 ID 或狀態" });
+      return res.status(400).send({ error: "缺少必要的商品 ID 或狀態" });
   }
 
   const query = `
       UPDATE Products
       SET status = ?
-      WHERE product_id = ?;
+      WHERE product_id = ? AND seller_id = ?;
   `;
 
-  db.query(query, [status, productId], (err, result) => {
-    if (err) {
-      console.error("Error updating product status:", err);
-      res.status(500).send({ error: "伺服器錯誤，無法更新商品狀態" });
-    } else {
-      res.status(200).send({ message: "商品狀態更新成功" });
-    }
+  db.query(query, [status, productId, sellerId], (err, result) => {
+      if (err) {
+          console.error("Error updating product status:", err);
+          res.status(500).send({ error: "伺服器錯誤，無法更新商品狀態" });
+      } else if (result.affectedRows === 0) {
+          res.status(403).send({ error: "您無權修改此商品狀態" });
+      } else {
+          res.status(200).send({ message: "商品狀態更新成功" });
+      }
   });
 });
 
