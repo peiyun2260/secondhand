@@ -302,7 +302,7 @@ app.get("/Users/:userId/reputation_score", (req, res) => {
 });
 
 app.get("/products", authenticate, (req, res) => {
-  const sellerId = req.user.id; // 從 Token 中獲取用戶 ID
+  const sellerId = req.user.id; // 從 Token 中獲取當前用戶的 ID
 
   const query = `
       SELECT 
@@ -314,7 +314,7 @@ app.get("/products", authenticate, (req, res) => {
           pi.image_url AS imageUrl
       FROM Products p
       LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
-      WHERE p.seller_id = ?;
+      WHERE p.seller_id = ?; -- 僅返回當前用戶的商品
   `;
 
   db.query(query, [sellerId], (err, results) => {
