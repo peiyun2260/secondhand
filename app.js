@@ -740,23 +740,33 @@ app.get("/contacts/:userId", (req, res) => {
   const sql = `
     SELECT 
       CASE 
-        WHEN sender_id = ? THEN receiver_id 
-        ELSE sender_id 
+        WHEN m.sender_id = ? THEN m.receiver_id 
+        ELSE m.sender_id 
       END AS contact_id,
-      MAX(sent_at) AS last_message_time,
-      (SELECT content FROM Messages 
-       WHERE 
-         (sender_id = contact_id AND receiver_id = ?) OR 
-         (sender_id = ? AND receiver_id = contact_id)
-       ORDER BY sent_at DESC
-       LIMIT 1) AS last_message
-    FROM Messages
-    WHERE sender_id = ? OR receiver_id = ?
-    GROUP BY contact_id
+      u.username AS contact_name,
+      MAX(m.sent_at) AS last_message_time,
+      (
+        SELECT content FROM Messages 
+        WHERE 
+          (sender_id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END 
+           AND receiver_id = ?) 
+          OR 
+          (sender_id = ? 
+           AND receiver_id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END)
+        ORDER BY sent_at DESC
+        LIMIT 1
+      ) AS last_message
+    FROM Messages m
+    JOIN Users u ON u.user_id = CASE 
+                                  WHEN m.sender_id = ? THEN m.receiver_id 
+                                  ELSE m.sender_id 
+                                END
+    WHERE m.sender_id = ? OR m.receiver_id = ?
+    GROUP BY contact_id, u.username
     ORDER BY last_message_time DESC
   `;
 
-  db.query(sql, [userId, userId, userId, userId, userId], (err, results) => {
+  db.query(sql, [userId, userId, userId, userId, userId, userId, userId, userId], (err, results) => {
     if (err) {
       console.error("GET /contacts/:userId error:", err);
       return res.status(500).json({ error: "資料庫錯誤" });
@@ -765,6 +775,7 @@ app.get("/contacts/:userId", (req, res) => {
     res.json(results);
   });
 });
+
 
 //取得訊息 (GET /messages?senderId=xxx&receiverId=yyy)
 app.get("/messages", (req, res) => {
