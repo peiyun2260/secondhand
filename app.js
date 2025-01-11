@@ -14,7 +14,9 @@ app.use(
       "https://secondhandhand22.wixsite.com",
       "https://secondhandhand22.wixsite.com/my-site-1",
       "http://localhost:3000",
-      "https://editor.wix.com"
+      "https://editor.wix.com",
+      /\.dev\.wix-code\.com$/, 
+      /\.wixsite\.com$/        
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
