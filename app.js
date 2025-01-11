@@ -610,6 +610,29 @@ app.post("/api/updateOrder/:orderId", (req, res) => {
     res.status(200).send({ message: "訂單狀態已成功更新為 completed" });
   });
 });
+// 找出訂單ID API
+app.get('/api/products', (req, res) => {
+  const { seller_id } = req.query; // 從查詢參數中獲取 seller_id
+
+  // 基本查詢語句
+  let query = 'SELECT product_id, seller_id, description, price, status, created_at FROM Products';
+
+  // 如果提供了 seller_id，則添加過濾條件
+  if (seller_id) {
+    query += ' WHERE seller_id = ?';
+  }
+
+  // 執行查詢
+  db.query(query, [seller_id], (err, results) => {
+    if (err) {
+      console.error('無法提取商品數據：', err);
+      return res.status(500).send('無法提取商品數據');
+    }
+
+    // 返回查詢結果
+    res.status(200).json(results);
+  });
+});
 
 // 獲取買家訂單資訊 API
 app.get("/api/getOrders/buyer/:buyerId", (req, res) => {
