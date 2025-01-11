@@ -666,81 +666,89 @@ app.get('/api/products/:product_id', (req, res) => {
 
 // 獲取買家訂單資訊 API
 app.get("/api/getOrders/buyer/:buyerId", (req, res) => {
-  const buyerId = req.params.buyerId;
-
-  if (!buyerId) {
-    return res.status(400).send("缺少買家 ID");
-  }
-
-  const query = `
-        SELECT 
-          o.order_id,
-          o.status AS order_status,
-          o.product_id,
-          p.name AS product_name,
-          p.seller_id,
-          u.username AS seller_name,
-          pi.image_url AS product_image_url
-        FROM Orders o
-        JOIN Products p ON o.product_id = p.product_id
-        JOIN Users u ON p.seller_id = u.user_id
-        LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
-        WHERE o.buyer_id = ?
-        ORDER BY o.order_date DESC
-      `;
-
-  db.query(query, [buyerId], (err, results) => {
-    if (err) {
-      console.error("查詢訂單失敗：", err);
-      return res.status(500).send("查詢訂單失敗");
+    const buyerId = req.params.buyerId;
+  
+    if (!buyerId) {
+      return res.status(400).send("缺少買家 ID");
     }
-
-    if (results.length === 0) {
-      return res.status(404).send("目前無訂單");
-    }
-
-    res.status(200).json(results);
+  
+    const query = `
+          SELECT 
+            o.order_id,
+            DATE(o.order_date) AS order_date, 
+            DATE(o.updated_date) AS updated_date,
+            o.status AS order_status,
+            o.product_id,
+            p.name AS product_name,
+            p.seller_id,
+            u.username AS seller_name,
+            pi.image_url AS product_image_url,
+            o.trade_time,
+            o.trade_location 
+          FROM Orders o
+          JOIN Products p ON o.product_id = p.product_id
+          JOIN Users u ON p.seller_id = u.user_id
+          LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
+          WHERE o.buyer_id = ?
+          ORDER BY o.order_date DESC
+        `;
+  
+    db.query(query, [buyerId], (err, results) => {
+      if (err) {
+        console.error("查詢訂單失敗：", err);
+        return res.status(500).send("查詢訂單失敗");
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send("目前無訂單");
+      }
+  
+      res.status(200).json(results);
+    });
   });
-});
-
+  
 // 獲取賣家訂單資訊 API
 app.get("/api/getOrders/seller/:sellerId", (req, res) => {
-  const sellerId = req.params.sellerId;
-
-  if (!sellerId) {
-    return res.status(400).send("缺少賣家 ID");
-  }
-
-  const query = `
-        SELECT 
-          o.order_id,
-          o.status AS order_status,
-          o.product_id,
-          p.name AS product_name,
-          o.buyer_id,
-          u.username AS buyer_name,
-          pi.image_url AS product_image_url
-        FROM Orders o
-        JOIN Products p ON o.product_id = p.product_id
-        JOIN Users u ON o.buyer_id = u.user_id
-        LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
-        WHERE o.seller_id = ?
-        ORDER BY o.order_date DESC
-      `;
-
-  db.query(query, [sellerId], (err, results) => {
-    if (err) {
-      console.error("查詢訂單失敗：", err);
-      return res.status(500).send("查詢訂單失敗");
+    const sellerId = req.params.sellerId;
+  
+    if (!sellerId) {
+      return res.status(400).send("缺少賣家 ID");
     }
-
-    if (results.length === 0) {
-      return res.status(404).send("目前無訂單");
-    }
-
-    res.status(200).json(results);
+  
+    const query = `
+          SELECT 
+            o.order_id,
+            DATE(o.order_date) AS order_date,
+            DATE(o.updated_date) AS updated_date, 
+            o.status AS order_status,
+            o.product_id,
+            p.name AS product_name,
+            o.buyer_id,
+            u.username AS buyer_name,
+            pi.image_url AS product_image_url,
+            o.trade_time,
+            o.trade_location
+          FROM Orders o
+          JOIN Products p ON o.product_id = p.product_id
+          JOIN Users u ON o.buyer_id = u.user_id
+          LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
+          WHERE o.seller_id = ?
+          ORDER BY o.order_date DESC
+        `;
+  
+    db.query(query, [sellerId], (err, results) => {
+      if (err) {
+        console.error("查詢訂單失敗：", err);
+        return res.status(500).send("查詢訂單失敗");
+      }
+  
+      if (results.length === 0) {
+        return res.status(404).send("目前無訂單");
+      }
+  
+      res.status(200).json(results);
+    });
   });
-});
 
 // 新增評論API
 app.post("/api/addReview", (req, res) => {
