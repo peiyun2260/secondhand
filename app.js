@@ -634,6 +634,34 @@ app.get('/api/products', (req, res) => {
   });
 });
 
+// 找出特定訂單ID API
+app.get('/api/products/:product_id', (req, res) => {
+  const { product_id } = req.params; // 從路徑參數中獲取 product_id
+
+  // 查詢語句
+  const query = `
+    SELECT product_id, seller_id, description, price, status, created_at 
+    FROM Products
+    WHERE product_id = ?
+  `;
+
+  // 執行查詢
+  db.query(query, [product_id], (err, results) => {
+    if (err) {
+      console.error('無法提取商品數據：', err);
+      return res.status(500).send('無法提取商品數據');
+    }
+
+    // 如果沒有找到匹配的商品，返回 404
+    if (results.length === 0) {
+      return res.status(404).send('未找到指定的商品');
+    }
+
+    // 返回查詢結果（單個商品數據）
+    res.status(200).json(results[0]);
+  });
+});
+
 // 獲取買家訂單資訊 API
 app.get("/api/getOrders/buyer/:buyerId", (req, res) => {
   const buyerId = req.params.buyerId;
