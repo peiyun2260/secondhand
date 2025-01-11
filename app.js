@@ -916,7 +916,7 @@ app.post("/messages/initiate", (req, res) => {
 
   const sql = `
     INSERT IGNORE INTO Messages (sender_id, receiver_id, content, sent_at, status)
-    VALUES (?, ?, '[聯絡初始化]', CURRENT_TIMESTAMP, 'read')
+    VALUES (?, ?, '[開始新聊天]', CURRENT_TIMESTAMP, 'read')
   `;
 
   db.query(sql, [senderId, receiverId], (err, results) => {
