@@ -616,7 +616,10 @@ app.post("/api/cancelOrder/:orderId", (req, res) => {
 
   // 找出所有商品和圖片的API
   app.get('/api/getProductsWithImages', (req, res) => {
-    const query = `
+    const { productId } = req.query; // 接收商品 ID 作為查詢參數
+
+    // 基本查詢語句
+    let query = `
         SELECT 
             p.product_id, 
             p.name AS product_name, 
@@ -634,7 +637,13 @@ app.post("/api/cancelOrder/:orderId", (req, res) => {
             p.product_id = pi.product_id
     `;
 
-    db.query(query, (err, results) => {
+    const queryParams = [];
+    if (productId) {
+        query += ` WHERE p.product_id = ?`; // 添加條件過濾
+        queryParams.push(productId);
+    }
+
+    db.query(query, queryParams, (err, results) => {
         if (err) {
             console.error('無法獲取商品資料：', err);
             return res.status(500).send('伺服器錯誤，無法獲取商品資料');
@@ -662,6 +671,12 @@ app.post("/api/cancelOrder/:orderId", (req, res) => {
 
         // 將 Map 轉為陣列
         const products = Object.values(productsMap);
+
+        // 如果請求的是特定商品且未找到資料
+        if (productId && products.length === 0) {
+            return res.status(404).send('未找到對應的商品資料');
+        }
+
         res.status(200).json(products);
     });
 });
