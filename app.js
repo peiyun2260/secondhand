@@ -879,6 +879,87 @@ app.get("/api/getReviews/:product_id", (req, res) => {
   });
 });
 
+ //API 刪除自己的評論
+app.delete('/api/deleteReview/:reviewId', (req, res) => {
+  const { reviewId } = req.params;
+  const { userId } = req.body; // 從前端傳遞的當前用戶 ID
+
+  if (!reviewId || !userId) {
+    return res.status(400).send("評論 ID 或用戶 ID 缺失");
+  }
+
+  const getReviewerQuery = `SELECT reviewer_id FROM Reviews WHERE review_id = ?`;
+
+  db.query(getReviewerQuery, [reviewId], (err, results) => {
+    if (err) {
+      console.error("無法檢索評論：", err);
+      return res.status(500).send("檢索評論時發生錯誤");
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send("評論不存在");
+    }
+
+    if (results[0].reviewer_id !== userId) {
+      return res.status(403).send("您無權刪除此評論");
+    }
+
+    const deleteQuery = `DELETE FROM Reviews WHERE review_id = ?`;
+
+    db.query(deleteQuery, [reviewId], (err) => {
+      if (err) {
+        console.error("刪除評論失敗：", err);
+        return res.status(500).send("刪除評論時發生錯誤");
+      }
+
+      res.status(200).send({ message: "評論已成功刪除" });
+    });
+  });
+});
+
+//API 更新自己的評論
+app.put('/api/updateReview/:reviewId', (req, res) => {
+  const { reviewId } = req.params;
+  const { content, rating, userId } = req.body;
+
+  if (!reviewId || !content || !rating || !userId) {
+    return res.status(400).send("缺少必要的更新資料");
+  }
+
+  const getReviewerQuery = `SELECT reviewer_id FROM Reviews WHERE review_id = ?`;
+
+  db.query(getReviewerQuery, [reviewId], (err, results) => {
+    if (err) {
+      console.error("檢索評論失敗：", err);
+      return res.status(500).send("檢索評論時發生錯誤");
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send("評論不存在");
+    }
+
+    if (results[0].reviewer_id !== userId) {
+      return res.status(403).send("您無權更新此評論");
+    }
+
+    const updateQuery = `
+      UPDATE Reviews
+      SET content = ?, rating = ?
+      WHERE review_id = ?
+    `;
+
+    db.query(updateQuery, [content, rating, reviewId], (err) => {
+      if (err) {
+        console.error("更新評論失敗：", err);
+        return res.status(500).send("更新評論時發生錯誤");
+      }
+
+      res.status(200).send({ message: "評論已成功更新" });
+    });
+  });
+});
+
+
 // 讀取購買者的所有評論API
 app.get("/api/getUserReviews/:buyerId", (req, res) => {
   const { buyerId } = req.params;
