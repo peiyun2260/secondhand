@@ -5,8 +5,6 @@ const cors = require("cors");
 require("dotenv").config();
 const app = express();
 
-
-
 app.use(bodyParser.json());
 app.use(
   cors({
@@ -15,8 +13,8 @@ app.use(
       "https://secondhandhand22.wixsite.com/my-site-1",
       "http://localhost:3000",
       "https://editor.wix.com",
-      /\.dev\.wix-code\.com$/, 
-      /\.wixsite\.com$/        
+      /\.dev\.wix-code\.com$/,
+      /\.wixsite\.com$/,
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
@@ -73,28 +71,27 @@ const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-      console.error("未提供 Authorization Header");
-      return res.status(401).send({ error: "未授權，請提供 Token" });
+    console.error("未提供 Authorization Header");
+    return res.status(401).send({ error: "未授權，請提供 Token" });
   }
 
   const token = authHeader.split(" ")[1];
   if (!token) {
-      console.error("Token 格式錯誤");
-      return res.status(401).send({ error: "Token 格式錯誤" });
+    console.error("Token 格式錯誤");
+    return res.status(401).send({ error: "Token 格式錯誤" });
   }
 
   try {
-      // 驗證 Token 並打印解碼內容
-      const user = jwt.verify(token, process.env.JWT_SECRET);
-      console.log("解碼的 Token 資訊：", user); // 確認是否包含 id
-      req.user = user; // 將用戶資料附加到 req
-      next(); // 繼續執行後續邏輯
+    // 驗證 Token 並打印解碼內容
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("解碼的 Token 資訊：", user); // 確認是否包含 id
+    req.user = user; // 將用戶資料附加到 req
+    next(); // 繼續執行後續邏輯
   } catch (error) {
-      console.error("Token 驗證失敗:", error.message);
-      return res.status(403).send({ error: "無效的 Token" });
+    console.error("Token 驗證失敗:", error.message);
+    return res.status(403).send({ error: "無效的 Token" });
   }
 };
-
 
 app.get("/", (req, res) => {
   res.send("伺服器已啟動");
@@ -245,7 +242,6 @@ app.get("/Users/:userId", (req, res) => {
     res.status(200).json(results[0]);
   });
 });
-
 
 // 查詢 username
 app.get("/Users/:userId/username", (req, res) => {
@@ -454,114 +450,113 @@ app.post("/Products/update", authenticate, (req, res) => {
 
 // 建立訂單 API
 app.post("/api/createOrder", (req, res) => {
-    const { product_id, buyer_id, tradeTime, tradeLocation } = req.body;
-  
-    // 驗證輸入資料是否完整
-    if (!product_id || !buyer_id || !tradeTime || !tradeLocation) {
-      return res.status(400).send("缺少必要的訂單資訊");
-    }
-  
-    const getSellerIdQuery = `
+  const { product_id, buyer_id, tradeTime, tradeLocation } = req.body;
+
+  // 驗證輸入資料是否完整
+  if (!product_id || !buyer_id || !tradeTime || !tradeLocation) {
+    return res.status(400).send("缺少必要的訂單資訊");
+  }
+
+  const getSellerIdQuery = `
         SELECT seller_id, price AS totalAmount FROM Products WHERE product_id = ? LIMIT 1
       `;
-    const insertOrderQuery = `
+  const insertOrderQuery = `
         INSERT INTO Orders (product_id, seller_id, buyer_id, total_amount, trade_time, trade_location)
         VALUES (?, ?, ?, ?, ?, ?)
       `;
-    const updateProductQuery = `
+  const updateProductQuery = `
         UPDATE Products
         SET status = 'sold'
         WHERE product_id = ?
       `;
-  
-    db.getConnection((err, connection) => {
-      if (err) {
-        console.error("無法獲取連接：", err);
+
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("無法獲取連接：", err);
+      return res.status(500).send("建立訂單時發生錯誤");
+    }
+
+    connection.beginTransaction((transactionErr) => {
+      if (transactionErr) {
+        console.error("無法啟動事務：", transactionErr);
+        connection.release();
         return res.status(500).send("建立訂單時發生錯誤");
       }
-  
-      connection.beginTransaction((transactionErr) => {
-        if (transactionErr) {
-          console.error("無法啟動事務：", transactionErr);
-          connection.release();
-          return res.status(500).send("建立訂單時發生錯誤");
-        }
-  
-        // 查找 Seller ID 和 Total Amount
-        connection.query(
-          getSellerIdQuery,
-          [product_id],
-          (sellerErr, sellerResult) => {
-            if (sellerErr || sellerResult.length === 0) {
-              console.error("無法找到 Seller ID 或 Total Amount：", sellerErr);
-              return connection.rollback(() => {
-                connection.release();
-                res.status(404).send("找不到與該商品 ID 關聯的商品");
-              });
-            }
-  
-            const sellerId = sellerResult[0].seller_id;
-            const totalAmount = sellerResult[0].totalAmount;
-  
-            // 插入訂單記錄
-            connection.query(
-              insertOrderQuery,
-              [
-                product_id,
-                sellerId,
-                buyer_id,
-                totalAmount,
-                tradeTime,
-                tradeLocation,
-              ],
-              (insertErr, result) => {
-                if (insertErr) {
-                  console.error("無法建立訂單：", insertErr);
-                  return connection.rollback(() => {
-                    connection.release();
-                    res.status(500).send("建立訂單時發生錯誤");
-                  });
-                }
-  
-                // 更新商品狀態
-                connection.query(
-                  updateProductQuery,
-                  [product_id],
-                  (updateErr) => {
-                    if (updateErr) {
-                      console.error("無法更新商品狀態：", updateErr);
+
+      // 查找 Seller ID 和 Total Amount
+      connection.query(
+        getSellerIdQuery,
+        [product_id],
+        (sellerErr, sellerResult) => {
+          if (sellerErr || sellerResult.length === 0) {
+            console.error("無法找到 Seller ID 或 Total Amount：", sellerErr);
+            return connection.rollback(() => {
+              connection.release();
+              res.status(404).send("找不到與該商品 ID 關聯的商品");
+            });
+          }
+
+          const sellerId = sellerResult[0].seller_id;
+          const totalAmount = sellerResult[0].totalAmount;
+
+          // 插入訂單記錄
+          connection.query(
+            insertOrderQuery,
+            [
+              product_id,
+              sellerId,
+              buyer_id,
+              totalAmount,
+              tradeTime,
+              tradeLocation,
+            ],
+            (insertErr, result) => {
+              if (insertErr) {
+                console.error("無法建立訂單：", insertErr);
+                return connection.rollback(() => {
+                  connection.release();
+                  res.status(500).send("建立訂單時發生錯誤");
+                });
+              }
+
+              // 更新商品狀態
+              connection.query(
+                updateProductQuery,
+                [product_id],
+                (updateErr) => {
+                  if (updateErr) {
+                    console.error("無法更新商品狀態：", updateErr);
+                    return connection.rollback(() => {
+                      connection.release();
+                      res.status(500).send("建立訂單時發生錯誤");
+                    });
+                  }
+
+                  // 提交事務
+                  connection.commit((commitErr) => {
+                    if (commitErr) {
+                      console.error("無法提交事務：", commitErr);
                       return connection.rollback(() => {
                         connection.release();
                         res.status(500).send("建立訂單時發生錯誤");
                       });
                     }
-  
-                    // 提交事務
-                    connection.commit((commitErr) => {
-                      if (commitErr) {
-                        console.error("無法提交事務：", commitErr);
-                        return connection.rollback(() => {
-                          connection.release();
-                          res.status(500).send("建立訂單時發生錯誤");
-                        });
-                      }
-  
-                      connection.release();
-                      res.status(201).send({
-                        message: "訂單已成功建立，商品狀態已更新",
-                        orderId: result.insertId,
-                      });
+
+                    connection.release();
+                    res.status(201).send({
+                      message: "訂單已成功建立，商品狀態已更新",
+                      orderId: result.insertId,
                     });
-                  }
-                );
-              }
-            );
-          }
-        );
-      });
+                  });
+                }
+              );
+            }
+          );
+        }
+      );
     });
   });
-  
+});
 
 // 更新訂單狀態 API
 app.post("/api/updateOrder/:orderId", (req, res) => {
@@ -590,23 +585,53 @@ app.post("/api/updateOrder/:orderId", (req, res) => {
     res.status(200).send({ message: "訂單狀態已成功更新為 completed" });
   });
 });
+
+// 取消訂單 API
+app.post("/api/cancelOrder/:orderId", (req, res) => {
+    const orderId = req.params.orderId;
+  
+    if (!orderId) {
+      return res.status(400).send("缺少訂單 ID");
+    }
+  
+    const query = `
+              UPDATE Orders
+              SET status = 'cancelled'
+              WHERE order_id = ? AND status = 'pending'
+          `;
+  
+    db.query(query, [orderId], (err, result) => {
+      if (err) {
+        console.error("無法取消訂單：", err);
+        return res.status(500).send("取消訂單時發生錯誤");
+      }
+  
+      if (result.affectedRows === 0) {
+        return res.status(404).send("未找到待確認的訂單或訂單已更新");
+      }
+  
+      res.status(200).send({ message: "訂單已成功取消" });
+    });
+  });
+
 // 找出訂單ID API
-app.get('/api/products', (req, res) => {
+app.get("/api/products", (req, res) => {
   const { seller_id } = req.query; // 從查詢參數中獲取 seller_id
 
   // 基本查詢語句
-  let query = 'SELECT product_id, seller_id, description, price, status, created_at FROM Products';
+  let query =
+    "SELECT product_id, seller_id, description, price, status, created_at FROM Products";
 
   // 如果提供了 seller_id，則添加過濾條件
   if (seller_id) {
-    query += ' WHERE seller_id = ?';
+    query += " WHERE seller_id = ?";
   }
 
   // 執行查詢
   db.query(query, [seller_id], (err, results) => {
     if (err) {
-      console.error('無法提取商品數據：', err);
-      return res.status(500).send('無法提取商品數據');
+      console.error("無法提取商品數據：", err);
+      return res.status(500).send("無法提取商品數據");
     }
 
     // 返回查詢結果
@@ -615,7 +640,7 @@ app.get('/api/products', (req, res) => {
 });
 
 // 找出特定訂單ID API
-app.get('/api/products/:product_id', (req, res) => {
+app.get("/api/products/:product_id", (req, res) => {
   const { product_id } = req.params; // 從路徑參數中獲取 product_id
 
   // 查詢語句
@@ -628,13 +653,13 @@ app.get('/api/products/:product_id', (req, res) => {
   // 執行查詢
   db.query(query, [product_id], (err, results) => {
     if (err) {
-      console.error('無法提取商品數據：', err);
-      return res.status(500).send('無法提取商品數據');
+      console.error("無法提取商品數據：", err);
+      return res.status(500).send("無法提取商品數據");
     }
 
     // 如果沒有找到匹配的商品，返回 404
     if (results.length === 0) {
-      return res.status(404).send('未找到指定的商品');
+      return res.status(404).send("未找到指定的商品");
     }
 
     // 返回查詢結果（單個商品數據）
@@ -644,13 +669,13 @@ app.get('/api/products/:product_id', (req, res) => {
 
 // 獲取買家訂單資訊 API
 app.get("/api/getOrders/buyer/:buyerId", (req, res) => {
-    const buyerId = req.params.buyerId;
-  
-    if (!buyerId) {
-      return res.status(400).send("缺少買家 ID");
-    }
-  
-    const query = `
+  const buyerId = req.params.buyerId;
+
+  if (!buyerId) {
+    return res.status(400).send("缺少買家 ID");
+  }
+
+  const query = `
           SELECT 
             o.order_id,
             DATE(o.order_date) AS order_date, 
@@ -670,30 +695,30 @@ app.get("/api/getOrders/buyer/:buyerId", (req, res) => {
           WHERE o.buyer_id = ?
           ORDER BY o.order_date DESC
         `;
-  
-    db.query(query, [buyerId], (err, results) => {
-      if (err) {
-        console.error("查詢訂單失敗：", err);
-        return res.status(500).send("查詢訂單失敗");
-      }
-  
-      if (results.length === 0) {
-        return res.status(404).send("目前無訂單");
-      }
-  
-      res.status(200).json(results);
-    });
+
+  db.query(query, [buyerId], (err, results) => {
+    if (err) {
+      console.error("查詢訂單失敗：", err);
+      return res.status(500).send("查詢訂單失敗");
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send("目前無訂單");
+    }
+
+    res.status(200).json(results);
   });
-  
+});
+
 // 獲取賣家訂單資訊 API
 app.get("/api/getOrders/seller/:sellerId", (req, res) => {
-    const sellerId = req.params.sellerId;
-  
-    if (!sellerId) {
-      return res.status(400).send("缺少賣家 ID");
-    }
-  
-    const query = `
+  const sellerId = req.params.sellerId;
+
+  if (!sellerId) {
+    return res.status(400).send("缺少賣家 ID");
+  }
+
+  const query = `
           SELECT 
             o.order_id,
             DATE(o.order_date) AS order_date,
@@ -713,20 +738,20 @@ app.get("/api/getOrders/seller/:sellerId", (req, res) => {
           WHERE o.seller_id = ?
           ORDER BY o.order_date DESC
         `;
-  
-    db.query(query, [sellerId], (err, results) => {
-      if (err) {
-        console.error("查詢訂單失敗：", err);
-        return res.status(500).send("查詢訂單失敗");
-      }
-  
-      if (results.length === 0) {
-        return res.status(404).send("目前無訂單");
-      }
-  
-      res.status(200).json(results);
-    });
+
+  db.query(query, [sellerId], (err, results) => {
+    if (err) {
+      console.error("查詢訂單失敗：", err);
+      return res.status(500).send("查詢訂單失敗");
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send("目前無訂單");
+    }
+
+    res.status(200).json(results);
   });
+});
 
 // 新增評論API
 app.post("/api/addReview", (req, res) => {
@@ -837,7 +862,7 @@ app.get("/Products/:product_id", (req, res) => {
 // 撈所有商品 + 其對應圖片
 app.get("/Products", authenticate, (req, res) => {
   const seller_id = req.user.id; // 從 Token 解碼的 user_id
-  
+
   const sql = `
     SELECT 
       p.product_id, 
@@ -875,13 +900,13 @@ app.get("/Products", authenticate, (req, res) => {
           status: row.status,
           createdAt: row.created_at,
           updatedAt: row.updated_at,
-          images: []
+          images: [],
         };
       }
       if (row.image_url) {
         productMap[row.product_id].images.push({
           image_id: row.image_id,
-          url: row.image_url
+          url: row.image_url,
         });
       }
     }
@@ -890,7 +915,6 @@ app.get("/Products", authenticate, (req, res) => {
     res.status(200).json(finalData);
   });
 });
-
 
 // POST /messages/initiate - 初始化聯絡人
 app.post("/messages/initiate", (req, res) => {
