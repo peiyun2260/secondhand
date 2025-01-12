@@ -879,84 +879,102 @@ app.get("/api/getReviews/:product_id", (req, res) => {
   });
 });
 
- //API 刪除自己的評論
-app.delete('/api/deleteReview/:reviewId', (req, res) => {
-  const { reviewId } = req.params;
-  const { userId } = req.body; // 從前端傳遞的當前用戶 ID
 
-  if (!reviewId || !userId) {
-    return res.status(400).send("評論 ID 或用戶 ID 缺失");
+// 刪除評論 API
+app.delete("/api/deleteReview/:reviewId", async (req, res) => {
+  const { reviewId } = req.params;
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+      return res.status(401).json({ error: "未提供驗證 Token" });
   }
 
-  const getReviewerQuery = `SELECT reviewer_id FROM Reviews WHERE review_id = ?`;
+  try {
+      // 驗證 JWT Token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
 
-  db.query(getReviewerQuery, [reviewId], (err, results) => {
-    if (err) {
-      console.error("無法檢索評論：", err);
-      return res.status(500).send("檢索評論時發生錯誤");
-    }
-
-    if (results.length === 0) {
-      return res.status(404).send("評論不存在");
-    }
-
-    if (results[0].reviewer_id !== userId) {
-      return res.status(403).send("您無權刪除此評論");
-    }
-
-    const deleteQuery = `DELETE FROM Reviews WHERE review_id = ?`;
-
-    db.query(deleteQuery, [reviewId], (err) => {
-      if (err) {
-        console.error("刪除評論失敗：", err);
-        return res.status(500).send("刪除評論時發生錯誤");
+      if (!userId) {
+          return res.status(401).json({ error: "驗證失敗，無效的 Token" });
       }
 
-      res.status(200).send({ message: "評論已成功刪除" });
-    });
-  });
+      // 查詢評論是否存在，且是否屬於該用戶
+      const reviewQuery = "SELECT * FROM reviews WHERE review_id = $1 AND reviewer_id = $2";
+      const reviewResult = await pool.query(reviewQuery, [reviewId, userId]);
+
+      if (reviewResult.rows.length === 0) {
+          return res.status(403).json({ error: "您無權刪除此評論，或評論不存在" });
+      }
+
+      // 刪除評論
+      const deleteQuery = "DELETE FROM reviews WHERE review_id = $1";
+      await pool.query(deleteQuery, [reviewId]);
+
+      res.status(200).json({ message: "評論刪除成功" });
+  } catch (error) {
+      console.error("刪除評論時發生錯誤：", error);
+
+      if (error.name === "JsonWebTokenError") {
+          return res.status(401).json({ error: "JWT Token 無效" });
+      } else if (error.name === "TokenExpiredError") {
+          return res.status(401).json({ error: "JWT Token 已過期" });
+      }
+
+      res.status(500).json({ error: "伺服器錯誤，無法刪除評論" });
+  }
 });
 
-//API 更新自己的評論
-app.put('/api/updateReview/:reviewId', (req, res) => {
+// 更新評論 API
+app.put("/api/updateReview/:reviewId", async (req, res) => {
   const { reviewId } = req.params;
-  const { content, rating, userId } = req.body;
+  const { content, rating } = req.body;
+  const token = req.headers.authorization?.split(" ")[1];
 
-  if (!reviewId || !content || !rating || !userId) {
-    return res.status(400).send("缺少必要的更新資料");
+  // 驗證是否提供了必要的資料
+  if (!token) {
+      return res.status(401).json({ error: "未提供驗證 Token" });
+  }
+  if (!content || !rating || typeof rating !== "number" || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "請提供有效的評論內容和評分（1 到 5）" });
   }
 
-  const getReviewerQuery = `SELECT reviewer_id FROM Reviews WHERE review_id = ?`;
+  try {
+      // 驗證 JWT Token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
 
-  db.query(getReviewerQuery, [reviewId], (err, results) => {
-    if (err) {
-      console.error("檢索評論失敗：", err);
-      return res.status(500).send("檢索評論時發生錯誤");
-    }
-
-    if (results.length === 0) {
-      return res.status(404).send("評論不存在");
-    }
-
-    if (results[0].reviewer_id !== userId) {
-      return res.status(403).send("您無權更新此評論");
-    }
-
-    const updateQuery = `
-      UPDATE Reviews
-      SET content = ?, rating = ?
-      WHERE review_id = ?
-    `;
-
-    db.query(updateQuery, [content, rating, reviewId], (err) => {
-      if (err) {
-        console.error("更新評論失敗：", err);
-        return res.status(500).send("更新評論時發生錯誤");
+      if (!userId) {
+          return res.status(401).json({ error: "驗證失敗，無效的 Token" });
       }
 
-      res.status(200).send({ message: "評論已成功更新" });
-    });
-  });
+      // 確認評論是否存在，且屬於該用戶
+      const reviewQuery = "SELECT * FROM reviews WHERE review_id = $1 AND reviewer_id = $2";
+      const reviewResult = await pool.query(reviewQuery, [reviewId, userId]);
+
+      if (reviewResult.rows.length === 0) {
+          return res.status(403).json({ error: "您無權更新此評論，或評論不存在" });
+      }
+
+      // 更新評論
+      const updateQuery = `
+          UPDATE reviews 
+          SET content = $1, rating = $2, review_date = NOW() 
+          WHERE review_id = $3
+      `;
+      await pool.query(updateQuery, [content, rating, reviewId]);
+
+      res.status(200).json({ message: "評論更新成功" });
+  } catch (error) {
+      console.error("更新評論時發生錯誤：", error);
+
+      if (error.name === "JsonWebTokenError") {
+          return res.status(401).json({ error: "JWT Token 無效" });
+      } else if (error.name === "TokenExpiredError") {
+          return res.status(401).json({ error: "JWT Token 已過期" });
+      }
+
+      res.status(500).json({ error: "伺服器錯誤，無法更新評論" });
+  }
 });
 
 
@@ -990,15 +1008,9 @@ app.get("/Products/:product_id", (req, res) => {
   const { product_id } = req.params;
   const sql = `
     SELECT 
-      p.product_id,
-      p.name,
-      p.description,
-      p.status,
-      pi.image_url,
-      p.seller_id,
+      p.seller_id AS seller_id,
       u.username AS sellerName
     FROM Products p
-    LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
     JOIN Users u ON p.seller_id = u.user_id
     WHERE p.product_id = ?
     LIMIT 1;
@@ -1014,7 +1026,6 @@ app.get("/Products/:product_id", (req, res) => {
     res.status(200).json(results[0]);
   });
 });
-
 
 // 撈所有商品 + 其對應圖片
 app.get("/Products", authenticate, (req, res) => {
@@ -1072,34 +1083,6 @@ app.get("/Products", authenticate, (req, res) => {
     res.status(200).json(finalData);
   });
 });
-
-
-app.post("/Products/updateDetails", authenticate, (req, res) => {
-  const { product_id, name, price, description, image_url } = req.body;
-  const seller_id = req.user.id; // 從 Token 中獲取用戶 ID
-
-  if (!product_id || !name || !price || !image_url) {
-      return res.status(400).send({ error: "缺少必要的商品資訊" });
-  }
-
-  const query = `
-      UPDATE Products
-      SET name = ?, price = ?, description = ?, image_url = ?
-      WHERE product_id = ? AND seller_id = ?;
-  `;
-
-  db.query(query, [name, price, description, image_url, product_id, seller_id], (err, result) => {
-      if (err) {
-          console.error("Error updating product details:", err);
-          res.status(500).send({ error: "伺服器錯誤，無法更新商品資訊" });
-      } else if (result.affectedRows === 0) {
-          res.status(403).send({ error: "您無權修改此商品資訊" });
-      } else {
-          res.status(200).send({ message: "商品資訊更新成功" });
-      }
-  });
-});
-
 
 // POST /messages/initiate - 初始化聯絡人
 app.post("/messages/initiate", (req, res) => {
@@ -1259,32 +1242,6 @@ app.patch("/messages/read", (req, res) => {
     }
 
     res.json({ updated: result.affectedRows });
-  });
-});
-
-// 刪除使用者之間的所有訊息
-app.delete("/api/contacts/:userId/:contactId", (req, res) => {
-  const { userId, contactId } = req.params;
-
-  // 刪除兩個使用者之間的所有訊息
-  const query = `
-    DELETE FROM Messages 
-    WHERE (sender_id = ? AND receiver_id = ?)
-    OR (sender_id = ? AND receiver_id = ?)
-  `;
-
-  // 執行查詢
-  db.query(query, [userId, contactId, contactId, userId], (err, results) => {
-    if (err) {
-      console.error("刪除訊息失敗：", err);
-      return res.status(500).send("刪除訊息失敗");
-    }
-
-    // 返回查詢結果
-    res.status(200).json({
-      message: "訊息刪除成功",
-      affectedRows: results.affectedRows
-    });
   });
 });
 
