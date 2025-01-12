@@ -1262,6 +1262,32 @@ app.patch("/messages/read", (req, res) => {
   });
 });
 
+// 刪除使用者之間的所有訊息
+app.delete("/api/contacts/:userId/:contactId", (req, res) => {
+  const { userId, contactId } = req.params;
+
+  // 刪除兩個使用者之間的所有訊息
+  const query = `
+    DELETE FROM Messages 
+    WHERE (sender_id = ? AND receiver_id = ?)
+    OR (sender_id = ? AND receiver_id = ?)
+  `;
+
+  // 執行查詢
+  db.query(query, [userId, contactId, contactId, userId], (err, results) => {
+    if (err) {
+      console.error("刪除訊息失敗：", err);
+      return res.status(500).send("刪除訊息失敗");
+    }
+
+    // 返回查詢結果
+    res.status(200).json({
+      message: "訊息刪除成功",
+      affectedRows: results.affectedRows
+    });
+  });
+});
+
 // 啟動伺服器
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
