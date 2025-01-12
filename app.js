@@ -1073,6 +1073,34 @@ app.get("/Products", authenticate, (req, res) => {
   });
 });
 
+
+app.post("/Products/updateDetails", authenticate, (req, res) => {
+  const { product_id, name, price, description, image_url } = req.body;
+  const seller_id = req.user.id; // 從 Token 中獲取用戶 ID
+
+  if (!product_id || !name || !price || !image_url) {
+      return res.status(400).send({ error: "缺少必要的商品資訊" });
+  }
+
+  const query = `
+      UPDATE Products
+      SET name = ?, price = ?, description = ?, image_url = ?
+      WHERE product_id = ? AND seller_id = ?;
+  `;
+
+  db.query(query, [name, price, description, image_url, product_id, seller_id], (err, result) => {
+      if (err) {
+          console.error("Error updating product details:", err);
+          res.status(500).send({ error: "伺服器錯誤，無法更新商品資訊" });
+      } else if (result.affectedRows === 0) {
+          res.status(403).send({ error: "您無權修改此商品資訊" });
+      } else {
+          res.status(200).send({ message: "商品資訊更新成功" });
+      }
+  });
+});
+
+
 // POST /messages/initiate - 初始化聯絡人
 app.post("/messages/initiate", (req, res) => {
   const { senderId, receiverId } = req.body;
