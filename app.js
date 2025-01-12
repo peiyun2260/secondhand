@@ -990,9 +990,15 @@ app.get("/Products/:product_id", (req, res) => {
   const { product_id } = req.params;
   const sql = `
     SELECT 
-      p.seller_id AS seller_id,
+      p.product_id,
+      p.name,
+      p.description,
+      p.status,
+      pi.image_url,
+      p.seller_id,
       u.username AS sellerName
     FROM Products p
+    LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
     JOIN Users u ON p.seller_id = u.user_id
     WHERE p.product_id = ?
     LIMIT 1;
@@ -1008,6 +1014,7 @@ app.get("/Products/:product_id", (req, res) => {
     res.status(200).json(results[0]);
   });
 });
+
 
 // 撈所有商品 + 其對應圖片
 app.get("/Products", authenticate, (req, res) => {
