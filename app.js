@@ -823,34 +823,35 @@ app.get("/api/getOrders/seller/:sellerId", (req, res) => {
 
 // 新增評論API
 app.post("/api/addReview", (req, res) => {
-  const { product_id, buyerId, reviewText, rating } = req.body;
+  const { product_id, order_id, reviewer_id, content, rating, review_date } = req.body;
 
   // 驗證輸入的完整性
-  if (!product_id || !buyerId || !reviewText || !rating) {
-    return res.status(400).send("缺少必要的評論資訊");
+  if (!product_id || !order_id || !reviewer_id || !content || !rating) {
+      return res.status(400).send("缺少必要的評論資訊");
   }
 
   const addReviewQuery = `
-    INSERT INTO Reviews (product_id, reviewer_id, content, rating)
-    VALUES (?, ?, ?, ?)
+      INSERT INTO Reviews (product_id, order_id, reviewer_id, content, rating, review_date)
+      VALUES (?, ?, ?, ?, ?, ?)
   `;
 
   db.query(
-    addReviewQuery,
-    [product_id, buyerId, reviewText, rating],
-    (err, result) => {
-      if (err) {
-        console.error("無法新增評論：", err);
-        return res.status(500).send("新增評論時發生錯誤");
-      }
+      addReviewQuery,
+      [product_id, order_id, reviewer_id, content, rating, review_date],
+      (err, result) => {
+          if (err) {
+              console.error("無法新增評論：", err);
+              return res.status(500).send("新增評論時發生錯誤");
+          }
 
-      res.status(201).send({
-        message: "評論已成功提交",
-        reviewId: result.insertId,
-      });
-    }
+          res.status(201).send({
+              message: "評論已成功提交",
+              reviewId: result.insertId,
+          });
+      }
   );
 });
+
 
 // 讀取特定商品的評論API
 app.get("/api/getReviews/:product_id", (req, res) => {
