@@ -7,7 +7,7 @@
 3. Relation_schema.pdf : 根據 ER model 轉成 schema
 4. 系統架構 : 清楚介紹本專案系統的完整功能
 5. Backend\Fronted: 前後端程式碼 
-7. SecondHandHand-FinalProject : 最終期末展示報告！
+7. SecondHandHand-FinalProject : 最終期末展示報告
 ## Contributors
 
 | 組員   | 系級     | 學號      | 工作分配                       |
