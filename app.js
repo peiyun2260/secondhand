@@ -614,6 +614,59 @@ app.post("/api/cancelOrder/:orderId", (req, res) => {
     });
   });
 
+  // 找出所有商品和圖片的API
+  app.get('/api/getProductsWithImages', (req, res) => {
+    const query = `
+        SELECT 
+            p.product_id, 
+            p.name AS product_name, 
+            p.description, 
+            p.price, 
+            p.status, 
+            p.created_at, 
+            p.updated_at,
+            pi.image_url
+        FROM 
+            SecondHandMarket.Products p
+        LEFT JOIN 
+            SecondHandMarket.ProductImages pi
+        ON 
+            p.product_id = pi.product_id
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('無法獲取商品資料：', err);
+            return res.status(500).send('伺服器錯誤，無法獲取商品資料');
+        }
+
+        // 整理結果：將相同商品的圖片合併到一個列表中
+        const productsMap = {};
+        results.forEach(row => {
+            if (!productsMap[row.product_id]) {
+                productsMap[row.product_id] = {
+                    product_id: row.product_id,
+                    product_name: row.product_name,
+                    description: row.description,
+                    price: row.price,
+                    status: row.status,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                    images: []
+                };
+            }
+            if (row.image_url) {
+                productsMap[row.product_id].images.push(row.image_url);
+            }
+        });
+
+        // 將 Map 轉為陣列
+        const products = Object.values(productsMap);
+        res.status(200).json(products);
+    });
+});
+
+
 // 找出訂單ID API
 app.get("/api/products", (req, res) => {
   const { seller_id } = req.query; // 從查詢參數中獲取 seller_id
