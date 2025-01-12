@@ -1,35 +1,35 @@
-SecondHandHand-政大二手交易平台
-Provide a platform for consumers to register as members for restaurant reservations. Establish a membership system on the platform based on the frequency of visits or the amount of consumption. Additionally, create a record of transactions and accumulate member points. Restaurants can also register on this platform and automatically allocate table numbers based on the number of guests for reservations. The platform also includes a blacklist management feature.
+# SecondHandHand-政大二手交易平台
+提供一個二手交易平台，讓政大師生可以註冊為會員，以進行二手商品的買賣活動。賣家可以上架商品，買家可以瀏覽商品並下訂，同時支援雙方的訊息私聊、交易評價功能，用户可透過商品管理來檢視和編輯商品狀態。整個交易過程包含用户的訂單記錄、評價記錄和訊息記錄。
 
-For more detailed information about the frontend and backend processes, please refer to the corresponding folder.
+## Suggested Reading Order
+1. 資料庫題目說明 : 包含專案的基本介紹、需求分析
+2. ERmodel.jpg : 根據需求分析畫出 ER model
+3. Relation_schema.pdf : 根據 ER model 轉成 schema
+4. 系統架構 : 清楚介紹本專案系統的完整功能
+5. Backend\Fronted: 前後端程式碼 
+7. SecondHandHand-FinalProject : 最終期末展示報告！
+## Contributors
 
-Suggested Reading Order
-資料庫題目說明 : 包含專案的基本介紹、需求分析
-ERmodel.jpg : 根據需求分析畫出 ER model
-Relation_schema.pdf : 根據 ER model 轉成 schema
-系統架構 : 清楚介紹本專案系統的完整功能
-EasyBookBackend\EazyBookFronted: 前後端程式碼
-EasyBook_FinalProject : 最終期末展示報告！
-Contributors
-組員	系級	學號	工作分配
-吳泓澈	資碩工一	111753116	組長、DEMO、前端開發
-朱筑筠	資碩工一	111753113	報告、簡報製作、後端開發
-李家蓁	資碩工一	111753129	前端開發
-陳品伃	資碩計一	112753204	後端開發、README整理
-羅鈺涵	資碩計一	112753208	後端開發
-楊迪奇	資碩計一	111753231	後端開發
-羅紹耘	資碩計一	111753217	資料庫建置
-Fronted
-使用工具
+| 組員   | 系級     | 學號      | 工作分配                       |
+|--------|----------|-----------|--------------------------------|
+| 陳紹瑜 | 資科碩一 | 113753212 | 組長、前端開發、後端開發、README整理           |
+| 陳凱輝 | 資科碩一 | 113753120 |              |
+| 錡軒誼 | 資科碩一 | 113753118 |                      |
+| 林佩昀 | 應數碩二 | 111751002 |           |
+| 余嘉恆 | 應數碩二 | 112751004 |                        |
 
-React
-Node.js
-Clone & Set Up
 
-Easy Book Fronted
-Backend
-使用工具
+## Fronted
+> 使用工具
+* Wix
+* HTML, Javascript&css
 
-FastAPI
-Docker
-MySQL
+
+## Backend
+> 使用工具
+* API
+* Render
+* MySQL
+
+> Set Up
+* 把後端API的code上傳到github，Render監聽github
