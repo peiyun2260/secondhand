@@ -885,14 +885,14 @@ app.get("/api/getReviews/:product_id", (req, res) => {
 
 // 刪除評論 API
 app.delete("/api/deleteReview/:review_id", (req, res) => {
-  const { review_id } = req.params;
+  const { review_id } = req.params; // 獲取路由參數中的 review_id
 
   // 驗證 review_id 是否存在
   if (!review_id) {
-    return res.status(400).send("缺少評論 ID");
+    return res.status(400).json({ error: "缺少評論 ID" });
   }
 
-  // SQL 查詢刪除評論
+  // SQL 查詢，刪除評論
   const deleteReviewQuery = `
     DELETE FROM Reviews
     WHERE review_id = ?
@@ -901,37 +901,30 @@ app.delete("/api/deleteReview/:review_id", (req, res) => {
   db.query(deleteReviewQuery, [review_id], (err, results) => {
     if (err) {
       console.error("刪除評論失敗：", err);
-      return res.status(500).send("刪除評論時發生錯誤");
+      return res.status(500).json({ error: "伺服器內部錯誤" });
     }
 
+    // 如果沒有刪除任何記錄，返回 404
     if (results.affectedRows === 0) {
-      return res.status(404).send("未找到要刪除的評論");
+      return res.status(404).json({ error: "未找到要刪除的評論" });
     }
 
-    res.status(200).send("評論刪除成功");
+    // 成功刪除評論
+    res.status(200).json({ message: "評論刪除成功" });
   });
 });
 
 
+
 // 更新評論 API
 app.put("/api/updateReview/:review_id", (req, res) => {
-  const { review_id } = req.params; // 從路由參數中獲取 review_id
-  const { content, rating } = req.body; // 從請求體中獲取更新的評論內容和評分
+  const { review_id } = req.params;
+  const { content, rating } = req.body;
 
-  // 驗證請求是否有效
-  if (!review_id) {
-    return res.status(400).send("缺少評論 ID");
+  if (!review_id || !content || !rating) {
+    return res.status(400).json({ error: "缺少必要的參數" });
   }
 
-  if (!content || typeof content !== "string") {
-    return res.status(400).send("評論內容無效");
-  }
-
-  if (!rating || typeof rating !== "number" || rating < 1 || rating > 5) {
-    return res.status(400).send("評分必須是 1 到 5 之間的數字");
-  }
-
-  // 更新評論的 SQL 查詢
   const updateReviewQuery = `
     UPDATE Reviews
     SET content = ?, rating = ?, review_date = NOW()
@@ -941,16 +934,18 @@ app.put("/api/updateReview/:review_id", (req, res) => {
   db.query(updateReviewQuery, [content, rating, review_id], (err, results) => {
     if (err) {
       console.error("更新評論失敗：", err);
-      return res.status(500).send("更新評論時發生錯誤");
+      return res.status(500).json({ error: "伺服器內部錯誤" });
     }
 
     if (results.affectedRows === 0) {
-      return res.status(404).send("未找到要更新的評論");
+      return res.status(404).json({ error: "未找到要更新的評論" });
     }
 
-    res.status(200).send("評論更新成功");
+    // 確保正確返回成功響應
+    res.status(200).json({ message: "評論更新成功" });
   });
 });
+
 
 
 
