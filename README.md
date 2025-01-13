@@ -36,3 +36,6 @@
 * MySQL 資料庫部署至 AWS RDS 雲端服務
 * 把後端 API 的 code 上傳到 github，Render 監聽 github
 
+## Website
+* https://secondhandhand22.wixsite.com/secondhand4nccu
+
