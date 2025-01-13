@@ -975,28 +975,37 @@ app.get("/api/getUserReviews/:buyerId", (req, res) => {
   });
 });
 
+// 更新 /Products/:productId API 以返回完整的商品資訊
 app.get("/Products/:product_id", (req, res) => {
   const { product_id } = req.params;
   const sql = `
-    SELECT 
-      p.seller_id AS seller_id,
-      u.username AS sellerName
-    FROM Products p
-    JOIN Users u ON p.seller_id = u.user_id
-    WHERE p.product_id = ?
-    LIMIT 1;
+      SELECT 
+          p.product_id,
+          p.seller_id,
+          u.username AS sellerName,
+          p.name,
+          p.price,
+          p.description,
+          pi.image_url
+      FROM Products p
+      JOIN Users u ON p.seller_id = u.user_id
+      LEFT JOIN ProductImages pi ON p.product_id = pi.product_id
+      WHERE p.product_id = ?
+      LIMIT 1;
   `;
+
   db.query(sql, [product_id], (err, results) => {
-    if (err) {
-      console.error("GET /Products/:product_id error:", err);
-      return res.status(500).json({ error: "資料庫錯誤" });
-    }
-    if (results.length === 0) {
-      return res.status(404).json({ error: "未找到商品或賣家資訊" });
-    }
-    res.status(200).json(results[0]);
+      if (err) {
+          console.error("GET /Products/:product_id error:", err);
+          return res.status(500).json({ error: "資料庫錯誤" });
+      }
+      if (results.length === 0) {
+          return res.status(404).json({ error: "未找到商品或賣家資訊" });
+      }
+      res.status(200).json(results[0]);
   });
 });
+
 
 // 撈所有商品 + 其對應圖片
 app.get("/Products", authenticate, (req, res) => {
