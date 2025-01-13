@@ -6,7 +6,7 @@
 2. ERmodel.jpg : 根據需求分析畫出 ER model
 3. Relation_schema.pdf : 根據 ER model 轉成 schema
 4. 系統架構 : 清楚介紹本專案系統的完整功能
-5. Backend\Fronted: 前後端程式碼 
+5. app.js\Fronted: 前後端程式碼 
 7. SecondHandHand-FinalProject : 最終期末展示報告
 ## Contributors
 
