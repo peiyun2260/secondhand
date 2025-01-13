@@ -1064,24 +1064,26 @@ app.get("/Products", authenticate, (req, res) => {
   });
 });
 
-app.post("/Products/updateDetails", authenticate, (req, res) => {
+app.post("/Products/updateDetails", authenticate, (req, res) => { 
   const { product_id, name, price, description, image_url } = req.body;
 
+  // 驗證必填欄位
   if (!product_id || !name || !price || !description || !image_url) {
       return res.status(400).send({ error: "缺少必要的商品資訊" });
   }
 
-  const query = `
+  const seller_id = req.user.id; // 從 Token 中獲取用戶 ID
+
+  // 更新 Products 表
+  const updateProductsQuery = `
       UPDATE Products
-      SET name = ?, price = ?, description = ?, image_url = ?
+      SET name = ?, price = ?, description = ?
       WHERE product_id = ? AND seller_id = ?;
   `;
 
-  const seller_id = req.user.id; // 從 Token 中獲取用戶 ID
-
-  db.query(query, [name, price, description, image_url, product_id, seller_id], (err, result) => {
+  db.query(updateProductsQuery, [name, price, description, product_id, seller_id], (err, result) => {
       if (err) {
-          console.error("Error updating product details:", err);
+          console.error("Error updating Products table:", err);
           return res.status(500).send({ error: "伺服器錯誤，無法更新商品資訊" });
       }
 
@@ -1089,7 +1091,28 @@ app.post("/Products/updateDetails", authenticate, (req, res) => {
           return res.status(403).send({ error: "您無權修改此商品" });
       }
 
-      res.status(200).send({ message: "商品資訊更新成功" });
+      console.log("Products 表更新成功");
+
+      // 更新 ProductImages 表
+      const updateImagesQuery = `
+          UPDATE ProductImages
+          SET image_url = ?
+          WHERE product_id = ?;
+      `;
+
+      db.query(updateImagesQuery, [image_url, product_id], (err2, result2) => {
+          if (err2) {
+              console.error("Error updating ProductImages table:", err2);
+              return res.status(500).send({ error: "伺服器錯誤，無法更新商品圖片" });
+          }
+
+          if (result2.affectedRows === 0) {
+              return res.status(403).send({ error: "未找到對應的商品圖片資料" });
+          }
+
+          console.log("ProductImages 表更新成功");
+          res.status(200).send({ message: "商品資訊更新成功" });
+      });
   });
 });
 
