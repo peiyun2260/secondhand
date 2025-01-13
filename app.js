@@ -884,101 +884,74 @@ app.get("/api/getReviews/:product_id", (req, res) => {
 
 
 // 刪除評論 API
-app.delete("/api/deleteReview/:reviewId", async (req, res) => {
-  const { reviewId } = req.params;
-  const token = req.headers.authorization?.split(" ")[1];
+app.delete("/api/deleteReview/:review_id", (req, res) => {
+  const { review_id } = req.params;
 
-  if (!token) {
-      return res.status(401).json({ error: "未提供驗證 Token" });
+  // 驗證 review_id 是否存在
+  if (!review_id) {
+    return res.status(400).send("缺少評論 ID");
   }
 
-  try {
-      // 驗證 JWT Token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const userId = decoded.id;
+  // SQL 查詢刪除評論
+  const deleteReviewQuery = `
+    DELETE FROM Reviews
+    WHERE review_id = ?
+  `;
 
-      if (!userId) {
-          return res.status(401).json({ error: "驗證失敗，無效的 Token" });
-      }
+  db.query(deleteReviewQuery, [review_id], (err, results) => {
+    if (err) {
+      console.error("刪除評論失敗：", err);
+      return res.status(500).send("刪除評論時發生錯誤");
+    }
 
-      // 查詢評論是否存在，且是否屬於該用戶
-      const reviewQuery = "SELECT * FROM reviews WHERE review_id = $1 AND reviewer_id = $2";
-      const reviewResult = await pool.query(reviewQuery, [reviewId, userId]);
+    if (results.affectedRows === 0) {
+      return res.status(404).send("未找到要刪除的評論");
+    }
 
-      if (reviewResult.rows.length === 0) {
-          return res.status(403).json({ error: "您無權刪除此評論，或評論不存在" });
-      }
-
-      // 刪除評論
-      const deleteQuery = "DELETE FROM reviews WHERE review_id = $1";
-      await pool.query(deleteQuery, [reviewId]);
-
-      res.status(200).json({ message: "評論刪除成功" });
-  } catch (error) {
-      console.error("刪除評論時發生錯誤：", error);
-
-      if (error.name === "JsonWebTokenError") {
-          return res.status(401).json({ error: "JWT Token 無效" });
-      } else if (error.name === "TokenExpiredError") {
-          return res.status(401).json({ error: "JWT Token 已過期" });
-      }
-
-      res.status(500).json({ error: "伺服器錯誤，無法刪除評論" });
-  }
+    res.status(200).send("評論刪除成功");
+  });
 });
+
 
 // 更新評論 API
-app.put("/api/updateReview/:reviewId", async (req, res) => {
-  const { reviewId } = req.params;
-  const { content, rating } = req.body;
-  const token = req.headers.authorization?.split(" ")[1];
+app.put("/api/updateReview/:review_id", (req, res) => {
+  const { review_id } = req.params; // 從路由參數中獲取 review_id
+  const { content, rating } = req.body; // 從請求體中獲取更新的評論內容和評分
 
-  // 驗證是否提供了必要的資料
-  if (!token) {
-      return res.status(401).json({ error: "未提供驗證 Token" });
-  }
-  if (!content || !rating || typeof rating !== "number" || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: "請提供有效的評論內容和評分（1 到 5）" });
+  // 驗證請求是否有效
+  if (!review_id) {
+    return res.status(400).send("缺少評論 ID");
   }
 
-  try {
-      // 驗證 JWT Token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const userId = decoded.id;
-
-      if (!userId) {
-          return res.status(401).json({ error: "驗證失敗，無效的 Token" });
-      }
-
-      // 確認評論是否存在，且屬於該用戶
-      const reviewQuery = "SELECT * FROM reviews WHERE review_id = $1 AND reviewer_id = $2";
-      const reviewResult = await pool.query(reviewQuery, [reviewId, userId]);
-
-      if (reviewResult.rows.length === 0) {
-          return res.status(403).json({ error: "您無權更新此評論，或評論不存在" });
-      }
-
-      // 更新評論
-      const updateQuery = `
-          UPDATE reviews 
-          SET content = $1, rating = $2, review_date = NOW() 
-          WHERE review_id = $3
-      `;
-      await pool.query(updateQuery, [content, rating, reviewId]);
-
-      res.status(200).json({ message: "評論更新成功" });
-  } catch (error) {
-      console.error("更新評論時發生錯誤：", error);
-
-      if (error.name === "JsonWebTokenError") {
-          return res.status(401).json({ error: "JWT Token 無效" });
-      } else if (error.name === "TokenExpiredError") {
-          return res.status(401).json({ error: "JWT Token 已過期" });
-      }
-
-      res.status(500).json({ error: "伺服器錯誤，無法更新評論" });
+  if (!content || typeof content !== "string") {
+    return res.status(400).send("評論內容無效");
   }
+
+  if (!rating || typeof rating !== "number" || rating < 1 || rating > 5) {
+    return res.status(400).send("評分必須是 1 到 5 之間的數字");
+  }
+
+  // 更新評論的 SQL 查詢
+  const updateReviewQuery = `
+    UPDATE Reviews
+    SET content = ?, rating = ?, review_date = NOW()
+    WHERE review_id = ?
+  `;
+
+  db.query(updateReviewQuery, [content, rating, review_id], (err, results) => {
+    if (err) {
+      console.error("更新評論失敗：", err);
+      return res.status(500).send("更新評論時發生錯誤");
+    }
+
+    if (results.affectedRows === 0) {
+      return res.status(404).send("未找到要更新的評論");
+    }
+
+    res.status(200).send("評論更新成功");
+  });
 });
+
 
 
 // 讀取購買者的所有評論API
