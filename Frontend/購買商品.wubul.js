@@ -7,7 +7,6 @@ $w.onReady(function () {
         const userId = getUserIdFromToken(token);
         const time = ($w("#timePicker1").value).split(":")
         const orderData = {
-            // productId: 2,
             product_id: local.getItem("selectedProduct"),        
             buyer_id: userId,
             tradeTime: `${time[0]}:${time[1]}`,
