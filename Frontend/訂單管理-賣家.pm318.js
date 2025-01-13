@@ -6,7 +6,6 @@ $w.onReady(function () {
     const token = getTokenFromLocalStorage();
     const userId = getUserIdFromToken(token);
     getOrdersSeller(userId);    
-	// getOrdersSeller(1);
 	if (!token) {
         // 如果未登入，跳轉到登入頁面
         wixWindow.openLightbox("請先登入會員"); 
