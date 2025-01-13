@@ -862,8 +862,9 @@ app.get("/api/getReviews/:product_id", (req, res) => {
     return res.status(400).send("缺少商品 ID");
   }
 
+  // 更新 SQL 查詢，確保提取 review_id
   const getReviewsQuery = `
-    SELECT reviewer_id, content, rating, review_date
+    SELECT review_id, reviewer_id, content, rating, review_date
     FROM Reviews
     WHERE product_id = ?
     ORDER BY review_date DESC
@@ -875,9 +876,11 @@ app.get("/api/getReviews/:product_id", (req, res) => {
       return res.status(500).send("讀取評論時發生錯誤");
     }
 
-    res.status(200).send(results);
+    // 回傳結果包含 review_id
+    res.status(200).json(results);
   });
 });
+
 
 
 // 刪除評論 API
