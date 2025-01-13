@@ -3,8 +3,6 @@ import { local } from 'wix-storage';
 
 $w.onReady(function () {
   const orderId = local.getItem("orderId");
-  console.log(orderId)
-  // const orderId = JSON.parse(local.getItem("orderId"));
     if (!orderId) {
     console.error("orderId 未找到");
   } else {
@@ -25,7 +23,6 @@ $w.onReady(function () {
     const selectedValue = $w("#radioGroup1").value;
 
     if (selectedValue === "yes") {
-      // const orderId = 4; // 模擬訂單 ID
       updateOrderStatus(orderId);
     } else {
       // 如果選擇否，不執行任何操作
@@ -53,7 +50,6 @@ function updateOrderStatus(orderId) {
     headers: {
       "Content-Type": "application/json",
     },
-    // credentials: "include"
   })
     .then((response) => {
       if (!response.ok) {
