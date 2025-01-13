@@ -1244,6 +1244,32 @@ app.post("/messages", (req, res) => {
   });
 });
 
+// 刪除使用者之間的所有訊息
+app.delete("/contacts/:userId/:contactId", (req, res) => {
+  const { userId, contactId } = req.params;
+
+  // 刪除兩個使用者之間的所有訊息
+  const query = `
+    DELETE FROM Messages 
+    WHERE (sender_id = ? AND receiver_id = ?)
+    OR (sender_id = ? AND receiver_id = ?)
+  `;
+
+  // 執行查詢
+  db.query(query, [userId, contactId, contactId, userId], (err, results) => {
+    if (err) {
+      console.error("刪除訊息失敗：", err);
+      return res.status(500).send("刪除訊息失敗");
+    }
+
+    // 返回查詢結果
+    res.status(200).json({
+      message: "訊息刪除成功",
+      affectedRows: results.affectedRows
+    });
+  });
+});
+
 // 3) 標記已讀 (PATCH /messages/read)
 // body: { senderId, receiverId }
 // 這意思是「對方(sender) 傳給我(receiver) 的所有未讀訊息」，全部標記為 read
